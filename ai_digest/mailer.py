@@ -47,8 +47,10 @@ class GmailMailer:
         html_body = markdown.markdown(body)
         
         context = {"content": html_body, "subject": subject}
-        template_path = Path(__file__).resolve().parent / "email_base.html.j2"
-        rendered_html = render_template(template_path, context)
+        from jinja2 import Environment, PackageLoader
+        env = Environment(loader=PackageLoader('ai_digest', ''))
+        template = env.get_template('email_base.html.j2')
+        rendered_html = template.render(context)
         
         inlined_html = premailer.transform(rendered_html)
         
@@ -78,14 +80,14 @@ class GmailMailer:
                 
         except Exception as e:
             print(f"Error sending email: {e}")
+            raise
 
 if __name__ == "__main__":
     import sys
     from dotenv import load_dotenv
     
-    # Load environment variables from .env file if it exists
-    root_dir = Path(__file__).resolve().parent.parent
-    load_dotenv(dotenv_path=root_dir / ".env", override=True)
+    # Load environment variables from .env file if it exists in CWD
+    load_dotenv(override=True)
     
     print("Testing GmailMailer...")
     

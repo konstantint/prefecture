@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from datetime import datetime, timedelta
 from prefect import flow, task
+from prefect.artifacts import create_markdown_artifact
 from ai_digest.config import load_config
 from ai_digest.prompt import PromptGenerator, register_loader, LastWeeksDigestLoader
 from ai_digest.gemini import GeminiGenerator
@@ -52,7 +53,13 @@ def write_lockfile(config_name: str):
 @task
 def generate_gemini_content(prompt_text: str, gemini_config: dict) -> str:
     gemini_gen = GeminiGenerator(**gemini_config)
-    return gemini_gen(prompt_text)
+    content = gemini_gen(prompt_text)
+    create_markdown_artifact(
+        key="digest",
+        markdown=content,
+        description="Generated Gemini Digest"
+    )
+    return content
 
 @task
 def send_ntfy_notification(content: str, file_path: str, ntfy_config: dict):
@@ -66,7 +73,7 @@ def send_email(content: str, mailer_config: dict):
     mailer(content)
 
 @flow
-def generate_digest_flow(config_file: str = "./configs/baby_digest.yaml"):
+def generate_digest_flow(config_file: str):
     config = load_config(config_file)
     config_dir = Path(config_file).resolve().parent
     config_name = config["name"]
@@ -82,7 +89,7 @@ def generate_digest_flow(config_file: str = "./configs/baby_digest.yaml"):
     send_ntfy_notification(content, file_path, config["ntfy"])
 
 @flow
-def dispatch_digest_flow(config_file: str = "./configs/baby_digest.yaml"):
+def dispatch_digest_flow(config_file: str):
     config = load_config(config_file)
     config_name = config["name"]
     
@@ -100,20 +107,4 @@ def dispatch_digest_flow(config_file: str = "./configs/baby_digest.yaml"):
     
     write_lockfile(config_name)
 
-if __name__ == "__main__":
-    import sys
-    from dotenv import load_dotenv
-    
-    root_dir = Path(__file__).resolve().parent.parent
-    load_dotenv(dotenv_path=root_dir / ".env", override=True)
-    
-    if len(sys.argv) > 1:
-        action = sys.argv[1]
-        if action == "generate":
-            generate_digest_flow()
-        elif action == "dispatch":
-            dispatch_digest_flow()
-        else:
-            print("Usage: python flows.py [generate|dispatch]")
-    else:
-        print("Usage: python flows.py [generate|dispatch]")
+

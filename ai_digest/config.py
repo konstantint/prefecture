@@ -13,6 +13,9 @@ def expand_env_vars(text: str) -> str:
 
 def load_config(config_path: str | Path) -> dict:
     """Loads a YAML configuration file with env var substitution."""
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=Path(".env"), override=True)
+    
     with open(config_path, "r") as f:
         content = f.read()
         
@@ -23,9 +26,8 @@ if __name__ == "__main__":
     import sys
     from dotenv import load_dotenv
     
-    # Load environment variables from .env file if it exists
-    root_dir = Path(__file__).resolve().parent.parent
-    load_dotenv(dotenv_path=root_dir / ".env", override=True)
+    # Load environment variables from .env file if it exists in CWD
+    load_dotenv(override=True)
     
     config_file = sys.argv[1] if len(sys.argv) > 1 else "./configs/baby_digest.yaml"
     try:

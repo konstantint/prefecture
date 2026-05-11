@@ -5,7 +5,7 @@
 1.  **Generation Flow:** Collects context, renders a prompt, calls the Google Gemini API (with Google Search grounding), saves the markdown to disk, and sends a push notification via `ntfy`.
 2.  **Dispatch Flow:** Runs later. It picks up the (potentially human-edited) markdown from the disk, compiles it into inline-styled HTML, emails it, and marks it as sent.
 
-The project is designed as a reusable package that can be installed and used from any directory.
+The project is designed as a reusable package that can be installed and used from any directory via a CLI.
 
 ## 2. Core Technologies
 *   **Orchestration:** Prefect 3.x
@@ -23,13 +23,14 @@ The package is structured as follows:
 ├── prefect.yaml              # Prefect deployments
 └── ai_digest/                # Package source code
     ├── __init__.py
+    ├── cli.py                # CLI entry point (no __file__ usage)
     ├── config.py             # Parses YAML configs with env var substitution
     ├── templating.py         # Low-level Jinja rendering helper
     ├── prompt.py             # PromptGenerator class & context loaders
     ├── gemini.py             # GeminiGenerator class
     ├── ntfy.py               # NtfySender class
-    ├── mailer.py             # GmailMailer class
-    ├── flows.py              # Prefect @flow definitions
+    ├── mailer.py             # GmailMailer class (uses PackageLoader)
+    ├── flows.py              # Prefect @flow definitions (no defaults)
     └── email_base.html.j2    # Email base template (encapsulated)
 ```
 
@@ -132,8 +133,9 @@ Initialized with kwargs from `ntfy:` YAML section.
 1.  Loads config from `config_file`.
 2.  Creates prompt using `PromptGenerator`.
 3.  Generates content using `GeminiGenerator`.
-4.  Saves markdown to `data/{config_name}/{YYYY-MM-DD}/digest.md` (relative to CWD).
-5.  Sends notification using `NtfySender`.
+4.  Publishes a Prefect markdown artifact named "digest".
+5.  Saves markdown to `data/{config_name}/{YYYY-MM-DD}/digest.md` (relative to CWD).
+6.  Sends notification using `NtfySender`.
 
 ### B. Dispatch Flow (`dispatch_digest_flow`)
 1.  Loads config from `config_file`.
@@ -141,3 +143,15 @@ Initialized with kwargs from `ntfy:` YAML section.
 3.  Reads markdown.
 4.  Sends email using `GmailMailer`.
 5.  Writes `.sent` lockfile.
+
+## 7. CLI Usage
+
+The package provides a console script `ai-digest`.
+
+```bash
+# Run generation flow
+uvx ai-digest generate <path_to_config.yaml>
+
+# Run dispatch flow
+uvx ai-digest dispatch <path_to_config.yaml>
+```

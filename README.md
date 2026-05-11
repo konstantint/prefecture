@@ -6,30 +6,22 @@
 
 - **Two-step workflow**: Generation and Dispatch, allowing for Human-in-the-Loop editing in between.
 - **Gemini Integration**: Uses `google-genai` SDK with search grounding.
+- **Prefect Artifacts**: Generates a markdown artifact named "digest" on the Prefect server.
 - **Custom Notifications**: Supports sending full content to custom `ntfy` hosts with authentication.
 - **Gmail Dispatch**: Sends styled HTML emails via Gmail API.
-- **Generalizable**: Can be used as a package in any directory.
+- **Reusable Package**: Can be run from any directory containing your configs and templates.
 
-## Installation
+## Installation & Usage
 
-Assuming the package is available on PyPI:
-
-```bash
-uv init
-uv add ai-digest
-```
-
-## Usage
+The recommended way to use `ai-digest` is via `uvx` (or `uv tool run`), which runs the tool without permanent installation in your project environment.
 
 ### 1. Project Setup
 
-Create a new directory for your digest job and set up the environment:
+Create a new directory for your digest job:
 
 ```bash
 mkdir my-digest
 cd my-digest
-uv init
-# Add ai-digest dependency
 ```
 
 Create a `.env` file in the root of your job directory with your credentials:
@@ -58,7 +50,7 @@ gemini:
   api_key: "$GEMINI_API_KEY"
   model: "gemini-3.1-flash-lite"
 prompt:
-  template_file: "../templates/prompt.j2"
+  template_file: "../templates/prompt.j2" # Relative to config file
   context_loaders:
     - type: "last_weeks_digest"
       assign_to: "last_weeks_digest"
@@ -93,9 +85,38 @@ Use Google Search to ground your answers.
 Format the output in Markdown.
 ```
 
-### 4. Prefect Deployment
+### 4. Running via CLI
 
-Create a `prefect.yaml` file in your job directory:
+Use `uvx` to run the commands. Pass the path to your config file.
+
+```bash
+# Run generation flow
+uvx ai-digest generate configs/my_digest.yaml
+
+# Run dispatch flow
+uvx ai-digest dispatch configs/my_digest.yaml
+```
+
+*Note: If developing locally and updating the package, use `uvx --refresh --from /path/to/ai-digest ai-digest ...` to bypass caching.*
+
+### Alternative: Local Installation as a Tool
+
+If you are actively developing or want to avoid typing `--from` every time:
+
+1. Install the package as a tool from your local clone:
+   ```bash
+   uv tool install /path/to/your/ai-digest
+   ```
+   *Pro tip: Add `--editable` to the install command to have changes in your source code take effect immediately.*
+
+2. Now you can run `ai-digest` directly from any directory containing your `.env` and config files:
+   ```bash
+   uv run ai-digest generate configs/my_digest.yaml
+   ```
+
+### 5. Prefect Deployment
+
+To schedule jobs with Prefect, create a `prefect.yaml` file in your job directory:
 
 ```yaml
 name: ai-digest
@@ -119,20 +140,30 @@ deployments:
       - cron: "0 12 * * 0"
 ```
 
-### 5. Running Flows
-
-You can run the flows directly for testing:
-
-```bash
-PYTHONPATH=. uv run python -m ai_digest.flows generate
-PYTHONPATH=. uv run python -m ai_digest.flows dispatch
-```
-(Note: `PYTHONPATH=.` is needed if running from the source directory before installing as a package).
-
-To use with Prefect server:
+To start the local Prefect server (UI and API), run:
 
 ```bash
 prefect server start
+```
+
+To deploy the scheduled jobs defined in `prefect.yaml` to the Prefect server, run:
+
+```bash
 prefect deploy --all
+```
+
+This will read your `prefect.yaml` and register the deployments.
+
+To start a worker to execute these scheduled jobs, run:
+
+```bash
+prefect worker start --pool "default-agent-pool"
+```
+
+**Note on Server Connection**:
+If your Prefect worker needs to connect to a specific server instance or if you are running it in a separate environment, you must specify the server's API URL by setting the `PREFECT_API_URL` environment variable:
+
+```bash
+export PREFECT_API_URL="http://127.0.0.1:4200/api"
 prefect worker start --pool "default-agent-pool"
 ```

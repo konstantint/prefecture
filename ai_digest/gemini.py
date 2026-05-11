@@ -36,8 +36,7 @@ if __name__ == "__main__":
     from pathlib import Path
     import sys
     
-    root_dir = Path(__file__).resolve().parent.parent.parent
-    load_dotenv(dotenv_path=root_dir / ".env", override=True)
+    load_dotenv(override=True)
     
     print("Testing GeminiGenerator...")
     api_key = os.environ.get("GEMINI_API_KEY")

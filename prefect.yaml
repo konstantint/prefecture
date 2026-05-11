@@ -1,0 +1,19 @@
+name: ai-digest
+prefect-version: 3.0.0
+
+deployments:
+  - name: generate-baby-digest
+    flow_name: generate_digest_flow
+    entrypoint: ai_digest.flows:generate_digest_flow
+    parameters:
+      config_file: "./configs/baby_digest.yaml"
+    schedules:
+      - cron: "0 8 * * 0"
+
+  - name: dispatch-baby-digest
+    flow_name: dispatch_digest_flow
+    entrypoint: ai_digest.flows:dispatch_digest_flow
+    parameters:
+      config_file: "./configs/baby_digest.yaml"
+    schedules:
+      - cron: "0 12 * * 0"

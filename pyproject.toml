@@ -1,0 +1,19 @@
+[project]
+name = "ai-digest"
+version = "0.1.0"
+description = "AI-authored newsletters with Prefect"
+requires-python = ">=3.10"
+dependencies = [
+    "prefect>=3.0.0",
+    "google-genai",
+    "Jinja2",
+    "markdown",
+    "premailer",
+    "requests",
+    "python-dotenv",
+    "pytest",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

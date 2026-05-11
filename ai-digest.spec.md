@@ -46,12 +46,12 @@ We will use a hybrid configuration approach to maximize flexibility.
 Defines the content of the digest.
 ```yaml
 name: "baby_digest"
+model: "gemini-3.1-pro-preview"
 prompt:
   template_file: "baby_prompt.j2"
   context_loaders:
-    - type: "previous_artifact"
-      artifact_name: "digest.md"
-      runs_ago: 1
+    - type: "days_ago"
+      days: 7
       assign_to: "last_weeks_digest"
 delivery:
   subject_template: "Weekly Digest: {{ date_from }} to {{ date_to }}"
@@ -88,6 +88,17 @@ deployments:
       - cron: "0 12 * * 0" # Sunday 12:00 PM (4 hours for human review)
 ```
 
+### C. Credentials (`.env`)
+Sensitive credentials must not be stored in YAML files or committed to source control. They should be stored in a `.env` file in the project root.
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GMAIL_CLIENT_ID=your_gmail_client_id
+GMAIL_CLIENT_SECRET=your_gmail_client_secret
+GMAIL_REFRESH_TOKEN=your_gmail_refresh_token
+```
+The `dispatch_email` task will load these variables to authenticate with the Gmail API.
+
 ## 5. Flow 1: Generation (`generate_digest_flow`)
 
 **Responsibility:** Gather data, prompt Gemini, save to disk, and notify the user.
@@ -110,7 +121,7 @@ from google.genai import types
 from prefect import task
 
 @task(retries=3, retry_delay_seconds=30)
-def generate_content(prompt_text: str) -> str:
+def generate_content(prompt_text: str, model_name: str = "gemini-3.1-pro-preview") -> str:
     client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
     
     # Using Gemini 3.1 Pro Preview with High Thinking and Search
@@ -120,7 +131,7 @@ def generate_content(prompt_text: str) -> str:
     )
     
     response_stream = client.models.generate_content_stream(
-        model="gemini-3.1-pro-preview",
+        model=model_name,
         contents=[prompt_text],
         config=generate_content_config,
     )
@@ -159,7 +170,7 @@ def notify_ready(topic: str, config_name: str, file_path: str):
 2.  **`check_lockfile`**: Checks if `data/{config_name}/{today}/.sent` exists. If yes, exit gracefully (prevents double emails).
 3.  **`read_markdown`**: Checks if `data/{config_name}/{today}/digest.md` exists. If not, raise an error (flow fails, perhaps user deleted it or generation failed). Reads the content.
 4.  **`compile_email_html`**: Converts markdown to HTML. Wraps it in `email_base.html.j2`. Runs it through `premailer.transform()`.
-5.  **`dispatch_email`**: Uses SMTP or Gmail API (based on `mailer_type`) to send to recipients.
+5.  **`dispatch_email`**: Uses Gmail API (configured via environment variables `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`) to send to recipients.
 6.  **`write_lockfile`**: Creates the empty `.sent` file to ensure idempotency.
 
 ## 7. Implementation & Usage Guide (For AI Coding Assistant)

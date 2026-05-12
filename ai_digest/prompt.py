@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 from datetime import datetime
+from prefect import task
+from prefect.cache_policies import NO_CACHE
 from ai_digest.templating import render_template
 
 class ContextLoader:
@@ -44,13 +46,15 @@ def register_loader(name: str, loader: ContextLoader):
     _registry[name] = loader
 
 class PromptGenerator:
-    def __init__(self, config_dir: Path, **kwargs):
+    def __init__(self, *, config_dir: Path, template_file: str, output_file_name: str = None, context_loaders: list = None, params: dict = None):
         self.config_dir = config_dir
-        self.template_file = kwargs.get("template_file")
-        self.context_loaders = kwargs.get("context_loaders", [])
-        self.params = kwargs.get("params", {})
+        self.template_file = template_file
+        self.output_file_name = output_file_name
+        self.context_loaders = context_loaders or []
+        self.params = params or {}
         
-    def __call__(self) -> str:
+    @task(name="PromptGenerator")
+    def __call__(self, run_dir: Path) -> str:
         context = {}
         
         for loader_cfg in self.context_loaders:
@@ -74,4 +78,19 @@ class PromptGenerator:
         if not template_path.is_absolute():
             template_path = self.config_dir / template_path
             
-        return render_template(template_path, context)
+        content = render_template(template_path, context)
+        
+        if self.output_file_name:
+            out_path = run_dir / self.output_file_name
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(out_path, "w") as f:
+                f.write(content)
+                
+        from prefect.artifacts import create_markdown_artifact
+        create_markdown_artifact(
+            key="prompt",
+            markdown=content,
+            description="Generated Prompt"
+        )
+                
+        return content

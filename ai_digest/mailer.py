@@ -9,14 +9,17 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from prefect import task
+from prefect.cache_policies import NO_CACHE
 from ai_digest.templating import render_template
 
 class GmailMailer:
-    def __init__(self, *, gmail_client_id: str, gmail_client_secret: str, gmail_refresh_token: str, recipients: list[str]):
+    def __init__(self, *, config_dir: Path, gmail_client_id: str, gmail_client_secret: str, gmail_refresh_token: str, recipients: list[str], content_file_name: str):
         self.client_id = gmail_client_id
         self.client_secret = gmail_client_secret
         self.refresh_token = gmail_refresh_token
         self.recipients = recipients
+        self.content_file_name = content_file_name
+        self.config_dir = config_dir
         
     def get_access_token(self) -> str:
         response = requests.post(
@@ -31,7 +34,11 @@ class GmailMailer:
         response.raise_for_status()
         return response.json()["access_token"]
         
-    def __call__(self, md_content: str):
+    @task(name="GmailMailer")
+    def __call__(self, run_dir: Path):
+        content_path = run_dir / self.content_file_name
+        with open(content_path, "r") as f:
+            md_content = f.read()
         # Parse frontmatter
         match = re.match(r"^---\s*\n(.*?)\n---\s*\n", md_content, re.DOTALL)
         if match:

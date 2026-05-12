@@ -17,7 +17,7 @@ def test_generate_prompt_only_params(test_template_dir):
         "params": {"name": "World", "last_weeks_digest": "None"}
     }
     generator = PromptGenerator(config_dir=test_template_dir, **prompt_config)
-    prompt = generator()
+    prompt = generator(run_dir=test_template_dir)
     assert prompt == "Hello World! Previous: None"
 
 def test_generate_prompt_with_loader(test_template_dir):
@@ -44,7 +44,7 @@ def test_generate_prompt_with_loader(test_template_dir):
     }
     
     generator = PromptGenerator(config_dir=test_template_dir, **prompt_config)
-    prompt = generator()
+    prompt = generator(run_dir=test_template_dir)
     assert prompt == "Hello LoaderTest! Previous: Old content"
 
 def test_generate_prompt_with_loader_remap(test_template_dir):
@@ -76,7 +76,7 @@ def test_generate_prompt_with_loader_remap(test_template_dir):
     
     try:
         generator = PromptGenerator(config_dir=test_template_dir, **prompt_config)
-        prompt = generator()
+        prompt = generator(run_dir=test_template_dir)
         assert prompt == "Previous: Old content"
     finally:
         if template_file.exists():

@@ -1,14 +1,26 @@
 import os
 import requests
+from pathlib import Path
 from prefect import task
+from prefect.cache_policies import NO_CACHE
 from requests.auth import HTTPBasicAuth
 
 class NtfySender:
-    def __init__(self, *, host: str = "https://ntfy.sh", user: str = None, password: str = None, topic: str):
+    def __init__(self, *, config_dir: Path, host: str = "https://ntfy.sh", user: str = None, password: str = None, topic: str, content_file_name: str = None, content: str = None, title: str = "AI Digest", tags: str = "robot,page_facing_up"):
+        if (content_file_name is not None) and (content is not None):
+            raise ValueError("Specify either content_file_name or content, not both")
+        if (content_file_name is None) and (content is None):
+            raise ValueError("Must specify either content_file_name or content")
+            
         self.host = host
         self.user = user
         self.password = password
         self.topic = topic
+        self.content_file_name = content_file_name
+        self.content = content
+        self.title = title
+        self.tags = tags
+        self.config_dir = config_dir
         
         # Ensure scheme is present
         if not self.host.startswith("http://") and not self.host.startswith("https://"):
@@ -18,10 +30,17 @@ class NtfySender:
         if self.host.endswith("/"):
             self.host = self.host[:-1]
             
-    def __call__(self, markdown: str):
+    @task(name="NtfySender")
+    def __call__(self, run_dir: Path):
+        if self.content is not None:
+            markdown = self.content
+        else:
+            content_path = run_dir / self.content_file_name
+            with open(content_path, "r") as f:
+                markdown = f.read()
         url = f"{self.host}/{self.topic}"
         
-        headers = {"Title": "AI Digest Ready", "Tags": "robot,page_facing_up"}
+        headers = {"Title": self.title, "Tags": self.tags}
         
         auth = None
         if self.user and self.password:

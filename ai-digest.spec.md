@@ -1,11 +1,7 @@
-# Technical Specification: `ai-digest` (Prefect Edition)
+# Technical Specification: `ai-digest` (Prefect Edition) - Step-Based Architecture
 
 ## 1. Overview
-`ai-digest` is a Python-based data orchestration system built on **Prefect**. It automates the generation and delivery of AI-authored newsletters/digests. To support Human-in-the-Loop editing, the process is split into two asynchronous Prefect flows:
-1.  **Generation Flow:** Collects context, renders a prompt, calls the Google Gemini API (with Google Search grounding), saves the markdown to disk, and sends a push notification via `ntfy`.
-2.  **Dispatch Flow:** Runs later. It picks up the (potentially human-edited) markdown from the disk, compiles it into inline-styled HTML, emails it, and marks it as sent.
-
-The project is designed as a reusable package that can be installed and used from any directory via a CLI.
+`ai-digest` is a Python-based data orchestration system built on **Prefect**. It automates the generation and delivery of AI-authored newsletters/digests. The process is driven by a single Prefect flow (`run_flow`) that executes a sequence of steps defined in a YAML configuration file. Components are object-oriented and callable as Prefect tasks.
 
 ## 2. Core Technologies
 *   **Orchestration:** Prefect 3.x
@@ -23,14 +19,14 @@ The package is structured as follows:
 ├── prefect.yaml              # Prefect deployments
 └── ai_digest/                # Package source code
     ├── __init__.py
-    ├── cli.py                # CLI entry point (no __file__ usage)
+    ├── cli.py                # CLI entry point
     ├── config.py             # Parses YAML configs with env var substitution
     ├── templating.py         # Low-level Jinja rendering helper
     ├── prompt.py             # PromptGenerator class & context loaders
     ├── gemini.py             # GeminiGenerator class
     ├── ntfy.py               # NtfySender class
-    ├── mailer.py             # GmailMailer class (uses PackageLoader)
-    ├── flows.py              # Prefect @flow definitions (no defaults)
+    ├── mailer.py             # GmailMailer class
+    ├── flows.py              # Prefect @flow definition (single flow)
     └── email_base.html.j2    # Email base template (encapsulated)
 ```
 
@@ -38,45 +34,59 @@ When used by a user, they can create a directory with their own configs and temp
 
 ```text
 /my-digest-job
-├── prefect.yaml              # Prefect deployments pointing to ai_digest.flows
+├── prefect.yaml              # Prefect deployments pointing to ai_digest.flows:run_flow
 ├── .env                      # Credentials
 ├── configs/
-│   └── baby_digest.yaml      # Job configuration
+│   ├── generate.yaml         # Config for generation steps
+│   └── dispatch.yaml         # Config for dispatch steps
 └── templates/
-    └── baby_prompt.j2        # Prompt template
+    └── prompt.j2             # Prompt template
 ```
 
 ## 4. Configuration Strategy (YAML + Prefect)
 
-We use an object-oriented configuration approach where components are created from YAML dicts directly.
+We use a step-based configuration approach. The YAML file defines a list of steps to execute.
 
 ### A. Business Logic: `configs/<name>.yaml`
 Defines the content and delivery of the digest. Supports environment variable substitution using `$VAR` or `${VAR}`.
 
+Example `generate.yaml`:
 ```yaml
-name: "baby_digest"
-gemini:
-  api_key: "$GEMINI_API_KEY"
-  model: "gemini-3.1-flash-lite"
-prompt:
-  template_file: "../templates/baby_prompt.j2" # Relative to config file
-  context_loaders:
-    - type: "last_weeks_digest"
-      assign_to: "last_weeks_digest"
-mailer:
-  gmail_client_id: "$GMAIL_CLIENT_ID"
-  gmail_client_secret: "$GMAIL_CLIENT_SECRET"
-  gmail_refresh_token: "$GMAIL_REFRESH_TOKEN"
-  recipients: ["consumer@example.com"]
-ntfy:
-  host: "$NTFY_HOST"
-  user: "$NTFY_USER"
-  password: "$NTFY_PASSWORD"
-  topic: "test"
+name: "baby_digest_generate"
+steps:
+  - prompt:
+      template_file: "../templates/baby_prompt.j2"
+      context_loaders:
+        - type: "last_weeks_digest"
+          assign_to: "last_weeks_digest"
+      output_file_name: "prompt.md"
+  - gemini:
+      api_key: "$GEMINI_API_KEY"
+      model: "gemini-3.1-flash-lite"
+      prompt_file_name: "prompt.md"
+      output_file_name: "digest.md"
+  - ntfy:
+      host: "$NTFY_HOST"
+      user: "$NTFY_USER"
+      password: "$NTFY_PASSWORD"
+      topic: "test"
+      content_file_name: "digest.md"
+```
+
+Example `dispatch.yaml`:
+```yaml
+name: "baby_digest_dispatch"
+steps:
+  - mailer:
+      gmail_client_id: "$GMAIL_CLIENT_ID"
+      gmail_client_secret: "$GMAIL_CLIENT_SECRET"
+      gmail_refresh_token: "$GMAIL_REFRESH_TOKEN"
+      recipients: ["consumer@example.com"]
+      content_file_name: "digest.md"
 ```
 
 ### B. Scheduling Logic: `prefect.yaml`
-This file tells Prefect *how* to run the Python code, passing the `config_file` path as a parameter.
+This file tells Prefect *how* to run the Python code, passing the `config_file` path as a parameter to the generic `run_flow`.
 
 ```yaml
 name: ai-digest
@@ -84,74 +94,65 @@ prefect-version: 3.0.0
 
 deployments:
   - name: generate-baby-digest
-    flow_name: generate_digest_flow
-    entrypoint: ai_digest.flows:generate_digest_flow
+    flow_name: run_flow
+    entrypoint: ai_digest.flows:run_flow
     parameters:
-      config_file: "./configs/baby_digest.yaml"
+      config_file: "./configs/baby_digest_generate.yaml"
     schedules:
-      - cron: "0 8 * * 0" # Sunday 8:00 AM
+      - cron: "0 8 * * 0"
 
   - name: dispatch-baby-digest
-    flow_name: dispatch_digest_flow
-    entrypoint: ai_digest.flows:dispatch_digest_flow
+    flow_name: run_flow
+    entrypoint: ai_digest.flows:run_flow
     parameters:
-      config_file: "./configs/baby_digest.yaml"
+      config_file: "./configs/baby_digest_dispatch.yaml"
     schedules:
-      - cron: "0 12 * * 0" # Sunday 12:00 PM
+      - cron: "0 12 * * 0"
 ```
 
-## 5. Core Components (Object-Oriented)
+## 5. Core Components (Object-Oriented Tasks)
+
+All components are classes with a `__call__` method decorated with `@task`. They accept `config_dir` in `__init__` and `run_dir` in `__call__`.
 
 ### A. `prompt.PromptGenerator`
-Initialized with kwargs from `prompt:` YAML section.
 *   Loads template (resolved relative to config file).
-*   Executes registered context loaders (e.g., `last_weeks_digest`).
+*   Executes registered context loaders.
 *   Applies `params`.
-*   Callable: `__call__(self) -> str` returning the compiled prompt.
+*   Writes output to `run_dir / output_file_name`.
+*   Publishes a Prefect markdown artifact named "prompt".
 
 ### B. `gemini.GeminiGenerator`
-Initialized with kwargs from `gemini:` YAML section.
+*   Reads prompt from `run_dir / prompt_file_name`.
 *   Uses `google-genai` SDK.
+*   Supports optional Google Search grounding via `use_google_search` parameter.
 *   Instructs Gemini to output markdown with YAML frontmatter containing `subject`.
-*   Callable: `__call__(self, prompt: str) -> str` returning the generated text.
+*   Writes output to `run_dir / output_file_name`.
+*   Publishes a Prefect markdown artifact named "digest".
 
 ### C. `mailer.GmailMailer`
-Initialized with kwargs from `mailer:` YAML section.
+*   Reads content from `run_dir / content_file_name`.
 *   Parses subject from frontmatter.
 *   Encapsulates email template (`email_base.html.j2`).
 *   Uses Gmail API to send email.
-*   Callable: `__call__(self, markdown: str)` sending the email.
 
 ### D. `ntfy.NtfySender`
-Initialized with kwargs from `ntfy:` YAML section.
-*   Supports custom hosts and authentication.
-*   Callable: `__call__(self, markdown: str)` sending the notification (including full content).
+*   Reads content from `run_dir / content_file_name` OR uses explicit `content` string.
+*   Sends notification with configurable `title` and `tags` to configured host and topic.
 
 ## 6. Flows
 
-### A. Generation Flow (`generate_digest_flow`)
+### A. Run Flow (`run_flow`)
 1.  Loads config from `config_file`.
-2.  Creates prompt using `PromptGenerator`.
-3.  Generates content using `GeminiGenerator`.
-4.  Publishes a Prefect markdown artifact named "digest".
-5.  Saves markdown to `data/{config_name}/{YYYY-MM-DD}/digest.md` (relative to CWD).
-6.  Sends notification using `NtfySender`.
-
-### B. Dispatch Flow (`dispatch_digest_flow`)
-1.  Loads config from `config_file`.
-2.  Checks for `.sent` lockfile.
-3.  Reads markdown.
-4.  Sends email using `GmailMailer`.
-5.  Writes `.sent` lockfile.
+2.  Creates `run_dir` as `data/<name>/<YYYY-MM-DD>` (relative to CWD).
+3.  Sets flow run name to `<name>-YYYYMMDD-HHMMSS`.
+4.  Iterates over `steps` in order.
+5.  Instantiates the component for each step and calls it with `run_dir`.
 
 ## 7. CLI Usage
 
 The package provides a console script `ai-digest`.
 
 ```bash
-# Run generation flow
-uvx ai-digest generate <path_to_config.yaml>
-
-# Run dispatch flow
-uvx ai-digest dispatch <path_to_config.yaml>
+# Run a flow with a specific config file
+uvx ai-digest <path_to_config.yaml>
 ```

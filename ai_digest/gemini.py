@@ -1,21 +1,39 @@
 import os
+from pathlib import Path
 from google import genai
 from google.genai import types
+from prefect import task
+from prefect.cache_policies import NO_CACHE
+from prefect.artifacts import create_markdown_artifact
 
 class GeminiGenerator:
-    def __init__(self, *, api_key: str, model: str = "gemini-3.1-flash-lite"):
+    def __init__(self, *, config_dir: Path, api_key: str, model: str = "gemini-3.1-flash-lite", prompt_file_name: str, output_file_name: str, use_google_search: bool = False):
         if not api_key:
             raise ValueError("api_key is required")
         self.client = genai.Client(api_key=api_key)
         self.model = model
-        
-    def __call__(self, prompt: str) -> str:
+        self.prompt_file_name = prompt_file_name
+        self.output_file_name = output_file_name
+        self.use_google_search = use_google_search
+        self.config_dir = config_dir
+
+    # cache_policy NO_CACHE because otherwise we get
+    #   JSON error: Unable to serialize unknown type: <class 'ai_digest.gemini.GeminiGenerator'>
+    @task(name="GeminiGenerator", cache_policy=NO_CACHE)
+    def __call__(self, run_dir: Path) -> str:
+        prompt_path = run_dir / self.prompt_file_name
+        with open(prompt_path, "r") as f:
+            prompt = f.read()
         system_instruction = """
         """
         
+        tools = []
+        if self.use_google_search:
+            tools.append(types.Tool(googleSearch=types.GoogleSearch()))
+            
         generate_content_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
-            tools=[types.Tool(googleSearch=types.GoogleSearch())],
+            tools=tools,
         )
         
         response_stream = self.client.models.generate_content_stream(
@@ -29,6 +47,16 @@ class GeminiGenerator:
             if chunk.text:
                 full_text += chunk.text
                 
+        out_path = run_dir / self.output_file_name
+        with open(out_path, "w") as f:
+            f.write(full_text)
+            
+        create_markdown_artifact(
+            key="digest",
+            markdown=full_text,
+            description="Generated Gemini Digest"
+        )
+            
         return full_text
 
 if __name__ == "__main__":

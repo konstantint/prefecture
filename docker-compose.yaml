@@ -1,0 +1,41 @@
+services:
+  prefect-server:
+    container_name: prefect-server
+    image: prefecthq/prefect:3.7.0-python3.14
+    environment:
+      TZ: Europe/Zurich
+      PREFECT_SERVER_ANALYTICS_ENABLED: false
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      # For SSH-forwarded access
+      PREFECT_SERVER_UI_API_URL: http://127.0.0.1:4200/api
+      # SQLite DB & internal data goes here
+      PREFECT_HOME: /workdir/prefect_data
+    ports:
+      # Do not serve externally, only via SSH forwarding
+      - "127.0.0.1:4200:4200"
+    volumes:
+      - ./workdir:/workdir
+    command: prefect server start
+    restart: unless-stopped
+
+  prefect-worker:
+    container_name: prefect-worker
+    build: .
+    depends_on:
+      - prefect-server
+    # CWD for the worker must be here
+    working_dir: /workdir
+    environment:
+      DO_NOT_TRACK: 1
+      TZ: Europe/Zurich
+      PREFECT_API_URL: http://prefect-server:4200/api
+    # Technically the worker will still read it in again, but in
+    # principle we could provide secrets from elsewhere here
+    # and not mount them into the container at all.
+    env_file:
+      - ./workdir/.env
+    volumes:
+      - ./workdir:/workdir
+    command: prefect worker start --pool default
+    restart: unless-stopped
+

@@ -58,7 +58,10 @@ steps:
   - prompt:
       template_file: "../templates/baby_prompt.j2"
       context_loaders:
-        - type: "last_weeks_digest"
+        - type: "run_dir_file"
+          params:
+            file_name: "digest.md"
+            days_ago: 7
           assign_to: "last_weeks_digest"
       output_file_name: "prompt.md"
   - gemini:

@@ -4,7 +4,8 @@
 
 ## Features
 
-- **Step-Based Architecture**: Define a sequence of steps (prompt generation, Gemini call, ntfy notification, Gmail dispatch) in YAML.
+- **Step-Based Architecture**: Define a sequence of steps (prompt generation, Gemini call, ntfy notification, Gmail dispatch, Google Chat reading) in YAML.
+- **Google Chat Reading**: Fetches messages from Google Chat spaces using OAuth 2.0.
 - **Gemini Integration**: Uses `google-genai` SDK with optional search grounding.
 - **Prefect Artifacts**: Generates markdown artifacts on the Prefect server.
 - **Custom Notifications**: Supports sending full content to custom `ntfy` hosts with authentication.
@@ -59,6 +60,9 @@ GEMINI_API_KEY=your_gemini_api_key
 GMAIL_CLIENT_ID=your_gmail_client_id
 GMAIL_CLIENT_SECRET=your_gmail_client_secret
 GMAIL_REFRESH_TOKEN=your_gmail_refresh_token
+GOOGLE_CHAT_CLIENT_ID=your_google_chat_client_id
+GOOGLE_CHAT_CLIENT_SECRET=your_google_chat_client_secret
+GOOGLE_CHAT_REFRESH_TOKEN=your_google_chat_refresh_token
 NTFY_TOPIC=test
 NTFY_HOST=ntfy.sh
 NTFY_USER=
@@ -72,6 +76,14 @@ Create a configuration file, e.g., `configs/my_digest.yaml`:
 ```yaml
 name: "my_digest"
 steps:
+  - google_chat_reader:
+      client_id: "$GOOGLE_CHAT_CLIENT_ID"
+      client_secret: "$GOOGLE_CHAT_CLIENT_SECRET"
+      refresh_token: "$GOOGLE_CHAT_REFRESH_TOKEN"
+      spaces:
+        - id: "AAAANPQ7Dow"
+          display_name: "!Knock"
+      max_messages: 10
   - prompt:
       template_file: "../templates/prompt.j2" # Relative to config file
       output_file_name: "prompt.md"

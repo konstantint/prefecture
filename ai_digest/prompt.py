@@ -6,44 +6,46 @@ from prefect.cache_policies import NO_CACHE
 from ai_digest.templating import render_template
 
 class ContextLoader:
-    def load(self) -> dict:
+    def __call__(self, run_dir: Path) -> str:
         raise NotImplementedError
-
-class LastWeeksDigestLoader(ContextLoader):
-    def __init__(self, data_dir: Path):
-        self.data_dir = data_dir
-        
-    def load(self) -> dict:
-        if not self.data_dir.exists():
-            return {"last_weeks_digest": ""}
-            
-        dates = []
-        for d in self.data_dir.iterdir():
-            if d.is_dir():
-                try:
-                    datetime.strptime(d.name, "%Y-%m-%d")
-                    dates.append(d.name)
-                except ValueError:
-                    continue
-                    
-        dates.sort(reverse=True)
-        
-        today_str = datetime.now().strftime("%Y-%m-%d")
-        
-        for d_str in dates:
-            if d_str == today_str:
-                continue
-            path = self.data_dir / d_str / "digest.md"
-            if path.exists():
-                with open(path, "r") as f:
-                    return {"last_weeks_digest": f.read()}
-                    
-        return {"last_weeks_digest": ""}
 
 _registry = {}
 
-def register_loader(name: str, loader: ContextLoader):
-    _registry[name] = loader
+def register_loader(name: str, loader_cls: type):
+    _registry[name] = loader_cls
+
+class RunDirFileLoader(ContextLoader):
+    """Loads the contents of a file in the run_dir (or a run_dir of one of the previous days)."""
+    def __init__(self, file_name: str, days_ago: int = 0, fail_on_error: bool = False):
+        self.file_name = file_name
+        self.days_ago = days_ago
+        self.fail_on_error = fail_on_error
+        
+    def __call__(self, run_dir: Path) -> str:
+        from datetime import datetime, timedelta
+        
+        if self.days_ago == 0:
+            target_path = run_dir / self.file_name
+        else:
+            try:
+                current_date = datetime.strptime(run_dir.name, "%Y-%m-%d")
+                prev_date = current_date - timedelta(days=self.days_ago)
+                prev_date_str = prev_date.strftime("%Y-%m-%d")
+                target_path = run_dir.parent / prev_date_str / self.file_name
+            except ValueError:
+                if self.fail_on_error:
+                    raise ValueError(f"Could not parse date from run_dir name: {run_dir.name}")
+                return None
+                
+        try:
+            with open(target_path, "r") as f:
+                return f.read()
+        except Exception as e:
+             if self.fail_on_error:
+                raise ValueError(f"could not load {target_path}: {e}")
+             return None
+
+register_loader("run_dir_file", RunDirFileLoader)
 
 class PromptGenerator:
     def __init__(self, *, config_dir: Path, template_file: str, output_file_name: str = None, context_loaders: list = None, params: dict = None):
@@ -62,18 +64,14 @@ class PromptGenerator:
             assign_to = loader_cfg.get("assign_to", loader_type)
             
             if loader_type in _registry:
-                loader = _registry[loader_type]
-                data = loader.load()
-                
-                if "last_weeks_digest" in data and assign_to != "last_weeks_digest":
-                    data[assign_to] = data.pop("last_weeks_digest")
-                    
-                context.update(data)
+                loader_cls = _registry[loader_type]
+                loader_params = loader_cfg.get("params", {})
+                loader_instance = loader_cls(**loader_params)
+                data = loader_instance(run_dir)
+                context.update({assign_to: data})
             else:
                 print(f"Warning: Unknown context loader type: {loader_type}")
-                
         context.update(self.params)
-        
         template_path = Path(self.template_file)
         if not template_path.is_absolute():
             template_path = self.config_dir / template_path

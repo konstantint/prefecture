@@ -8,6 +8,7 @@ from ai_digest.prompt import PromptGenerator
 from ai_digest.gemini import GeminiGenerator
 from ai_digest.ntfy import NtfySender
 from ai_digest.mailer import GmailMailer
+from ai_digest.google_chat_reader import GoogleChatReader
 
 def generate_run_name(**kwargs) -> str:
     from prefect.runtime import flow_run
@@ -24,7 +25,7 @@ def generate_run_name(**kwargs) -> str:
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     return f"{name}-{run_id}"
 
-@flow(name="ai-digest", flow_run_name=generate_run_name)
+@flow(name="ai-digest", log_prints=True, flow_run_name=generate_run_name)
 def run_flow(config_file: str):
     config = load_config(config_file)
     
@@ -35,9 +36,7 @@ def run_flow(config_file: str):
     run_dir = Path("data") / name / today_str
     run_dir.mkdir(parents=True, exist_ok=True)
     
-    from ai_digest.prompt import register_loader, LastWeeksDigestLoader
-    base_data_dir = Path("data") / name
-    register_loader("last_weeks_digest", LastWeeksDigestLoader(base_data_dir))
+
     
     config_dir = Path(config_file).resolve().parent
     
@@ -55,5 +54,8 @@ def run_flow(config_file: str):
             elif step_type == "mailer":
                 mailer = GmailMailer(config_dir=config_dir, **step_cfg)
                 mailer(run_dir=run_dir)
+            elif step_type == "google_chat_reader":
+                reader = GoogleChatReader(config_dir=config_dir, **step_cfg)
+                reader(run_dir=run_dir)
             else:
                 print(f"Unknown step type: {step_type}")

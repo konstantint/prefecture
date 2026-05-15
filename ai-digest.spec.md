@@ -24,6 +24,7 @@ The package is structured as follows:
     ├── templating.py         # Low-level Jinja rendering helper
     ├── prompt.py             # PromptGenerator class & context loaders
     ├── gemini.py             # GeminiGenerator class
+    ├── google_chat_reader.py # GoogleChatReader class
     ├── ntfy.py               # NtfySender class
     ├── mailer.py             # GmailMailer class
     ├── flows.py              # Prefect @flow definition (single flow)
@@ -138,6 +139,11 @@ All components are classes with a `__call__` method decorated with `@task`. They
 ### D. `ntfy.NtfySender`
 *   Reads content from `run_dir / content_file_name` OR uses explicit `content` string.
 *   Sends notification with configurable `title` and `tags` to configured host and topic.
+
+### E. `google_chat_reader.GoogleChatReader`
+*   Reads messages from Google Chat spaces.
+*   Uses OAuth 2.0 for authentication.
+*   Saves raw JSON and simplified `data.json`.
 
 ## 6. Flows
 

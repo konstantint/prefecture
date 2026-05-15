@@ -2,6 +2,7 @@ services:
   prefect-server:
     container_name: prefect-server
     image: prefecthq/prefect:3.7.0-python3.14
+    user: "${UID:-0}:${GID:-0}"
     environment:
       TZ: Europe/Zurich
       PREFECT_SERVER_ANALYTICS_ENABLED: false
@@ -23,6 +24,7 @@ services:
     build: .
     depends_on:
       - prefect-server
+    user: "${UID:-0}:${GID:-0}"
     # CWD for the worker must be here
     working_dir: /workdir
     environment:

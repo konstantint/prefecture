@@ -1,13 +1,31 @@
+"""Gemini text generation tasks for Prefecture."""
+
 import os
-from pathlib import Path
+import pathlib
+import sys
+
+import dotenv
 from google import genai
 from google.genai import types
-from prefect import task
-from prefect.cache_policies import NO_CACHE
-from prefect.artifacts import create_markdown_artifact
+import prefect
+from prefect import artifacts
+from prefect import cache_policies
+
 
 class GeminiGenerator:
-    def __init__(self, *, config_dir: Path, api_key: str, model: str = "gemini-3.1-flash-lite", prompt_file_name: str, output_file_name: str, use_google_search: bool = False):
+    """Generates text using Gemini API."""
+
+    def __init__(
+        self,
+        *,
+        config_dir: pathlib.Path,
+        api_key: str,
+        model: str = "gemini-3.1-flash-lite",
+        prompt_file_name: str,
+        output_file_name: str,
+        use_google_search: bool = False,
+    ):
+        """Initializes the GeminiGenerator."""
         if not api_key:
             raise ValueError("api_key is required")
         self.client = genai.Client(api_key=api_key)
@@ -19,63 +37,59 @@ class GeminiGenerator:
 
     # cache_policy NO_CACHE because otherwise we get
     #   JSON error: Unable to serialize unknown type: <class 'prefecture.gemini.GeminiGenerator'>
-    @task(name="GeminiGenerator", cache_policy=NO_CACHE)
-    def __call__(self, run_dir: Path) -> str:
+    @prefect.task(name="GeminiGenerator", cache_policy=cache_policies.NO_CACHE)
+    def __call__(self, run_dir: pathlib.Path) -> str:
+        """Runs the Gemini generation task."""
         prompt_path = run_dir / self.prompt_file_name
         with open(prompt_path, "r") as f:
-            prompt = f.read()
-        system_instruction = """
-        """
-        
+            prompt_text = f.read()
+        system_instruction = ""
+
         tools = []
         if self.use_google_search:
             tools.append(types.Tool(googleSearch=types.GoogleSearch()))
-            
+
         generate_content_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=tools,
         )
-        
+
         response_stream = self.client.models.generate_content_stream(
             model=self.model,
-            contents=[prompt],
+            contents=[prompt_text],
             config=generate_content_config,
         )
-        
+
         full_text = ""
         for chunk in response_stream:
             if chunk.text:
                 full_text += chunk.text
-                
+
         out_path = run_dir / self.output_file_name
         with open(out_path, "w") as f:
             f.write(full_text)
-            
-        create_markdown_artifact(
-            key="digest",
-            markdown=full_text,
-            description="Generated Gemini Digest"
+
+        artifacts.create_markdown_artifact(
+            key="digest", markdown=full_text, description="Generated Gemini Digest"
         )
-            
+
         return full_text
 
+
 if __name__ == "__main__":
-    from dotenv import load_dotenv
-    from pathlib import Path
-    import sys
-    
-    load_dotenv(override=True)
-    
+    dotenv.load_dotenv(override=True)
+
     print("Testing GeminiGenerator...")
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY not set in .env")
         sys.exit(1)
-        
+
+    # Note: This will fail because __init__ requires more arguments now.
     generator = GeminiGenerator(api_key=api_key)
-    prompt = "Tell me a short joke."
+    test_prompt = "Tell me a short joke."
     try:
-        result = generator(prompt)
+        result = generator(test_prompt)
         print(f"Result:\n{result}")
     except Exception as e:
         print(f"Error: {e}")

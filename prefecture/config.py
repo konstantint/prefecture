@@ -1,7 +1,12 @@
+"""Configuration loading utilities for Prefecture."""
+
 import os
+import pathlib
 import re
+import sys
+
+import dotenv
 import yaml
-from pathlib import Path
 
 def expand_env_vars(text: str) -> str:
     """Replaces $VAR or ${VAR} with environment variable values."""
@@ -11,24 +16,20 @@ def expand_env_vars(text: str) -> str:
     text = re.sub(r'\$([a-zA-Z_][a-zA-Z0-9_]*)', lambda m: os.environ.get(m.group(1), ''), text)
     return text
 
-def load_config(config_path: str | Path) -> dict:
+def load_config(config_path: str | pathlib.Path) -> dict:
     """Loads a YAML configuration file with env var substitution."""
-    from dotenv import load_dotenv
-    load_dotenv(dotenv_path=Path(".env"), override=True)
-    
+    dotenv.load_dotenv(dotenv_path=pathlib.Path(".env"), override=True)
+
     with open(config_path, "r") as f:
         content = f.read()
-        
+
     expanded_content = expand_env_vars(content)
     return yaml.safe_load(expanded_content)
 
 if __name__ == "__main__":
-    import sys
-    from dotenv import load_dotenv
-    
     # Load environment variables from .env file if it exists in CWD
-    load_dotenv(override=True)
-    
+    dotenv.load_dotenv(override=True)
+
     config_file = sys.argv[1] if len(sys.argv) > 1 else "./configs/baby_digest.yaml"
     try:
         config = load_config(config_file)

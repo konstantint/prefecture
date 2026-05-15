@@ -1,31 +1,35 @@
+"""Google Chat reader tasks for Prefecture."""
+
 import argparse
 import datetime
 import json
 import os
-from typing import Any, Dict, List, Optional
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from prefect import task
-from slugify import slugify
-import dotenv
+import typing
 
-dotenv.load_dotenv()
+import dotenv
+from google.auth.transport import requests
+from google.oauth2 import credentials
+from google_auth_oauthlib import flow
+from googleapiclient import discovery
+import prefect
+import slugify
 
 SCOPES = ['https://www.googleapis.com/auth/chat.messages.readonly']
 
 class GoogleChatReader:
+    """Reads messages from Google Chat."""
+
     def __init__(
-        self, 
-        config_dir: str, 
-        client_id: str, 
-        client_secret: str, 
-        refresh_token: str, 
-        spaces: List[Dict[str, Any]], 
-        max_messages: Optional[int] = None, 
-        max_hours_ago: Optional[int] = None
+        self,
+        config_dir: str,
+        client_id: str,
+        client_secret: str,
+        refresh_token: str,
+        spaces: list[dict[str, typing.Any]],
+        max_messages: int | None = None,
+        max_hours_ago: int | None = None,
     ):
+        """Initializes the GoogleChatReader."""
         self.config_dir = config_dir
         self.client_id = os.path.expandvars(client_id)
         self.client_secret = os.path.expandvars(client_secret)
@@ -34,46 +38,56 @@ class GoogleChatReader:
         self.max_messages = max_messages
         self.max_hours_ago = max_hours_ago
 
-    def _get_credentials(self) -> Credentials:
-        creds = Credentials(
+    def _get_credentials(self) -> credentials.Credentials:
+        """Gets Google API credentials."""
+        creds = credentials.Credentials(
             token=None,
             refresh_token=self.refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
             client_id=self.client_id,
             client_secret=self.client_secret,
-            scopes=SCOPES
+            scopes=SCOPES,
         )
         try:
-            creds.refresh(Request())
+            creds.refresh(requests.Request())
         except Exception as e:
             print(f"Failed to refresh token: {e}")
             raise
         return creds
 
-    @task(name="GoogleChatReader")
+    @prefect.task(name="GoogleChatReader")
     def __call__(self, run_dir: str) -> None:
+        """Reads messages from Google Chat and saves them."""
         print(f"Starting Google Chat reader in {run_dir}")
-        
-        if not self.client_id or not self.client_secret or not self.refresh_token:
-            raise ValueError("client_id, client_secret, and refresh_token must be specified")
+
+        if (
+            not self.client_id
+            or not self.client_secret
+            or not self.refresh_token
+        ):
+            raise ValueError(
+                "client_id, client_secret, and refresh_token must be specified"
+            )
 
         print(f"Debug: client_id starts with: {self.client_id[:10]}")
         creds = self._get_credentials()
-        service = build('chat', 'v1', credentials=creds)
+        service = discovery.build("chat", "v1", credentials=creds)
 
-        raw_dir = os.path.join(run_dir, 'chat', 'raw')
+        raw_dir = os.path.join(run_dir, "chat", "raw")
         os.makedirs(raw_dir, exist_ok=True)
 
         all_messages = []
 
         cutoff_time = None
         if self.max_hours_ago:
-            cutoff_time = datetime.datetime.utcnow() - datetime.timedelta(hours=self.max_hours_ago)
+            cutoff_time = datetime.datetime.utcnow() - datetime.timedelta(
+                hours=self.max_hours_ago
+            )
 
         for space in self.spaces:
             space_id = space['id']
             display_name = space['display_name']
-            slug = slugify(display_name)
+            slug = slugify.slugify(display_name)
             
             print(f"Reading space: {display_name} ({space_id})")
             
@@ -155,26 +169,33 @@ class GoogleChatReader:
         print(f"Saved {len(all_messages)} simplified messages to {data_file}")
 
 def main():
+    """Main function to run the Google Chat reader."""
+    dotenv.load_dotenv()  # Load environment variables here
+
     parser = argparse.ArgumentParser(description="Google Chat Reader")
-    parser.add_argument("--config", required=True, help="Path to YAML config file")
-    parser.add_argument("--run-dir", default=".", help="Directory to save output")
+    parser.add_argument(
+        "--config", required=True, help="Path to YAML config file"
+    )
+    parser.add_argument(
+        "--run-dir", default=".", help="Directory to save output"
+    )
     args = parser.parse_args()
 
     try:
         import yaml
-        with open(args.config, 'r') as f:
-            config = yaml.safe_load(f)
+
+        with open(args.config, "r") as f:
+            cfg = yaml.safe_load(f)
     except Exception as e:
         print(f"Failed to load config: {e}")
         return
 
-    reader_config = config.get('google_chat_reader', {})
-    
+    reader_config = cfg.get("google_chat_reader", {})
+
     reader = GoogleChatReader(
-        config_dir=os.path.dirname(args.config),
-        **reader_config
+        config_dir=os.path.dirname(args.config), **reader_config
     )
-    
+
     reader(run_dir=args.run_dir)
 
 if __name__ == "__main__":

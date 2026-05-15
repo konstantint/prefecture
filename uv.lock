@@ -7,41 +7,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "ai-digest"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "google-api-python-client" },
-    { name = "google-auth-httplib2" },
-    { name = "google-auth-oauthlib" },
-    { name = "google-genai" },
-    { name = "jinja2" },
-    { name = "markdown" },
-    { name = "prefect" },
-    { name = "premailer" },
-    { name = "pytest" },
-    { name = "python-dotenv" },
-    { name = "python-slugify" },
-    { name = "requests" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "google-api-python-client" },
-    { name = "google-auth-httplib2" },
-    { name = "google-auth-oauthlib" },
-    { name = "google-genai" },
-    { name = "jinja2" },
-    { name = "markdown" },
-    { name = "prefect", specifier = ">=3.0.0" },
-    { name = "premailer" },
-    { name = "pytest" },
-    { name = "python-dotenv" },
-    { name = "python-slugify" },
-    { name = "requests" },
-]
-
-[[package]]
 name = "aiosqlite"
 version = "0.22.1"
 source = { registry = "https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/simple/" }
@@ -1671,6 +1636,41 @@ dependencies = [
 sdist = { url = "https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/prefect/prefect-3.7.0.tar.gz", hash = "sha256:f7a494d464ee736efa15640c9a991c40647e6cb80f4fdf01964b517551c6b727" }
 wheels = [
     { url = "https://us-python.pkg.dev/artifact-foundry-prod/ah-3p-staging-python/prefect/prefect-3.7.0-py3-none-any.whl", hash = "sha256:4f0ed2ca02c46780eb2e2c22f4af082928055d2450b31c33f30001aa40638922" },
+]
+
+[[package]]
+name = "prefecture"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "google-api-python-client" },
+    { name = "google-auth-httplib2" },
+    { name = "google-auth-oauthlib" },
+    { name = "google-genai" },
+    { name = "jinja2" },
+    { name = "markdown" },
+    { name = "prefect" },
+    { name = "premailer" },
+    { name = "pytest" },
+    { name = "python-dotenv" },
+    { name = "python-slugify" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "google-api-python-client" },
+    { name = "google-auth-httplib2" },
+    { name = "google-auth-oauthlib" },
+    { name = "google-genai" },
+    { name = "jinja2" },
+    { name = "markdown" },
+    { name = "prefect", specifier = ">=3.0.0" },
+    { name = "premailer" },
+    { name = "pytest" },
+    { name = "python-dotenv" },
+    { name = "python-slugify" },
+    { name = "requests" },
 ]
 
 [[package]]

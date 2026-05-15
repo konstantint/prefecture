@@ -1,6 +1,6 @@
 # Specification: Prompt Generation and Context Loading
 
-This document describes how prompts are generated and how context is loaded in `ai-digest`.
+This document describes how prompts are generated and how context is loaded in `prefecture`.
 
 ## 1. Overview
 Prompt generation is handled by the `PromptGenerator` class. It combines a Jinja2 template with dynamic context loaded by `ContextLoader` implementations and static parameters.

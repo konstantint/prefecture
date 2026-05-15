@@ -18,7 +18,7 @@ class GeminiGenerator:
         self.config_dir = config_dir
 
     # cache_policy NO_CACHE because otherwise we get
-    #   JSON error: Unable to serialize unknown type: <class 'ai_digest.gemini.GeminiGenerator'>
+    #   JSON error: Unable to serialize unknown type: <class 'prefecture.gemini.GeminiGenerator'>
     @task(name="GeminiGenerator", cache_policy=NO_CACHE)
     def __call__(self, run_dir: Path) -> str:
         prompt_path = run_dir / self.prompt_file_name

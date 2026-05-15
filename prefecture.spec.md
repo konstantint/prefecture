@@ -1,7 +1,7 @@
-# Technical Specification: `ai-digest` (Prefect Edition) - Step-Based Architecture
+# Technical Specification: `prefecture` (Prefect Edition) - Step-Based Architecture
 
 ## 1. Overview
-`ai-digest` is a Python-based data orchestration system built on **Prefect**. It automates the generation and delivery of AI-authored newsletters/digests. The process is driven by a single Prefect flow (`run_flow`) that executes a sequence of steps defined in a YAML configuration file. Components are object-oriented and callable as Prefect tasks.
+`prefecture` is a Python-based data orchestration system built on **Prefect**. It automates the generation and delivery of AI-authored newsletters/digests. The process is driven by a single Prefect flow (`run_flow`) that executes a sequence of steps defined in a YAML configuration file. Components are object-oriented and callable as Prefect tasks.
 
 ## 2. Core Technologies
 *   **Orchestration:** Prefect 3.x
@@ -14,10 +14,10 @@
 The package is structured as follows:
 
 ```text
-/ai-digest
+/prefecture
 ├── pyproject.toml            # uv project definition
-├── prefect.yaml              # Prefect deployments
-└── ai_digest/                # Package source code
+├── Dockerfile                # Dockerfile for worker
+└── prefecture/               # Package source code
     ├── __init__.py
     ├── cli.py                # CLI entry point
     ├── config.py             # Parses YAML configs with env var substitution
@@ -35,7 +35,7 @@ When used by a user, they can create a directory with their own configs and temp
 
 ```text
 /my-digest-job
-├── prefect.yaml              # Prefect deployments pointing to ai_digest.flows:run_flow
+├── prefect.yaml              # Prefect deployments pointing to prefecture.flows:run_flow
 ├── .env                      # Credentials
 ├── configs/
 │   ├── generate.yaml         # Config for generation steps
@@ -89,30 +89,13 @@ steps:
       content_file_name: "digest.md"
 ```
 
-### B. Scheduling Logic: `prefect.yaml`
-This file tells Prefect *how* to run the Python code, passing the `config_file` path as a parameter to the generic `run_flow`.
+### B. Usage via Docker (Recommended)
 
-```yaml
-name: ai-digest
-prefect-version: 3.0.0
+The intended usage is to run `prefecture` with its dependencies using Docker as described in `README.md`.
+1. **Start Infrastructure**: `docker compose up -d --build` starts Prefect server and worker.
+2. **Project Setup**: User creates a directory with `prefect.yaml`, `.env`, `configs/`, and `templates/`.
+3. **Deployment**: `docker compose exec prefect-worker prefect deploy --all --no-prompt` is used to deploy flows defined in `prefect.yaml`.
 
-deployments:
-  - name: generate-baby-digest
-    flow_name: run_flow
-    entrypoint: ai_digest.flows:run_flow
-    parameters:
-      config_file: "./configs/baby_digest_generate.yaml"
-    schedules:
-      - cron: "0 8 * * 0"
-
-  - name: dispatch-baby-digest
-    flow_name: run_flow
-    entrypoint: ai_digest.flows:run_flow
-    parameters:
-      config_file: "./configs/baby_digest_dispatch.yaml"
-    schedules:
-      - cron: "0 12 * * 0"
-```
 
 ## 5. Core Components (Object-Oriented Tasks)
 
@@ -159,9 +142,9 @@ All components are classes with a `__call__` method decorated with `@task`. They
 
 ## 7. CLI Usage
 
-The package provides a console script `ai-digest`.
+The package provides a console script `prefecture`.
 
 ```bash
 # Run a flow with a specific config file
-uvx ai-digest <path_to_config.yaml>
+uvx prefecture <path_to_config.yaml>
 ```

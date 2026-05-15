@@ -1,35 +1,19 @@
-# AI Digest
+# Prefecture
 
-`ai-digest` is a Python-based data orchestration system built on **Prefect**. It automates the generation and delivery of AI-authored newsletters/digests using Google Gemini API and Gmail. It features a flexible, step-based architecture that allows you to define custom workflows in YAML.
+`prefecture` is a Python-based data orchestration system built on **[Prefect](https://www.prefect.io/)**. It was initially created for automating the generation and delivery of regular (e.g. weekly) AI-authored newsletters/digests using Google Gemini API and Gmail. It features a flexible, step-based architecture that allows to define more general custom workflows.
 
 ## Features
 
-- **Step-Based Architecture**: Define a sequence of steps (prompt generation, Gemini call, ntfy notification, Gmail dispatch, Google Chat reading) in YAML.
-- **Google Chat Reading**: Fetches messages from Google Chat spaces using OAuth 2.0.
+- **Simple Step-Based Architecture**: Define a sequence of steps (prompt generation, Gemini call, ntfy notification, Gmail dispatch, Google Chat reading) in YAML.
 - **Gemini Integration**: Uses `google-genai` SDK with optional search grounding.
 - **Prefect Artifacts**: Generates markdown artifacts on the Prefect server.
-- **Custom Notifications**: Supports sending full content to custom `ntfy` hosts with authentication.
+- **Google Chat Reading**: Fetches messages from Google Chat spaces using OAuth 2.0.
+- **Custom Notifications**: Supports `ntfy` notifications.
 - **Gmail Dispatch**: Sends styled HTML emails via Gmail API.
-- **Reusable Package**: Can be run from any directory containing your configs and templates.
 
-## Installation
+## Usage
 
-Assuming the package is available on PyPI:
-
-```bash
-uv init
-uv add ai-digest
-```
-
-Or install it as a local tool for development:
-
-```bash
-uv tool install /path/to/your/ai-digest --editable
-```
-
-## Usage via Docker (Recommended)
-
-The easiest way to run `ai-digest` with its dependencies is using Docker.
+The intended way is to run `prefecture` with its dependencies is using Docker.
 
 ### 1. Start Prefect Infrastructure
 
@@ -81,9 +65,9 @@ steps:
       client_secret: "$GOOGLE_CHAT_CLIENT_SECRET"
       refresh_token: "$GOOGLE_CHAT_REFRESH_TOKEN"
       spaces:
-        - id: "AAAANPQ7Dow"
-          display_name: "!Knock"
-      max_messages: 10
+        - id: "<some-chat-id>"
+          display_name: "Chat-display-name"
+      max_messages: 100
   - prompt:
       template_file: "../templates/prompt.j2" # Relative to config file
       output_file_name: "prompt.md"
@@ -107,6 +91,8 @@ Run the deployment command inside the worker container:
 docker compose exec prefect-worker prefect deploy --all --no-prompt
 ```
 
+The `deploy_all.sh` file in this directory does exactly that.
+
 ### 5. Launch Flows
 
 You can launch flows manually or manage schedules via the Prefect UI at `http://localhost:4200`.
@@ -114,16 +100,19 @@ You can launch flows manually or manage schedules via the Prefect UI at `http://
 To launch a flow from the command line:
 
 ```bash
-docker compose exec prefect-worker prefect deployment run 'ai-digest/deployment-name'
+docker compose exec prefect-worker prefect deployment run 'prefecture/deployment-name'
 ```
 
 ## Local CLI Usage
 
-If you prefer not to use Docker, you can run the CLI directly.
+If you prefer not to use Docker, you can use the CLI directly. First install it:
 
 ```bash
-# Run a flow with a specific config file
-uvx ai-digest configs/my_digest.yaml
+uv tool install [--editable] .
 ```
 
-*Note: If developing locally and updating the package, use `uvx --refresh --from /path/to/ai-digest ai-digest ...` to bypass caching.*
+```bash
+uv tool run configs/my_digest.yaml
+```
+
+*Note: If developing locally and updating the package, use `uvx --refresh --from /path/to/prefecture prefecture ...` to bypass caching.*

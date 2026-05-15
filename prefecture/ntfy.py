@@ -6,7 +6,7 @@ from prefect.cache_policies import NO_CACHE
 from requests.auth import HTTPBasicAuth
 
 class NtfySender:
-    def __init__(self, *, config_dir: Path, host: str = "https://ntfy.sh", user: str = None, password: str = None, topic: str, content_file_name: str = None, content: str = None, title: str = "AI Digest", tags: str = "robot,page_facing_up"):
+    def __init__(self, *, config_dir: Path, host: str = "https://ntfy.sh", user: str = None, password: str = None, topic: str, content_file_name: str = None, content: str = None, title: str = "Notification", tags: str = "robot,page_facing_up"):
         if (content_file_name is not None) and (content is not None):
             raise ValueError("Specify either content_file_name or content, not both")
         if (content_file_name is None) and (content is None):

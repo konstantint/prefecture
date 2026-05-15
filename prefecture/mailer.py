@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from prefect import task
 from prefect.cache_policies import NO_CACHE
-from ai_digest.templating import render_template
+from prefecture.templating import render_template
 
 class GmailMailer:
     def __init__(self, *, config_dir: Path, gmail_client_id: str, gmail_client_secret: str, gmail_refresh_token: str, recipients: list[str], content_file_name: str):
@@ -55,7 +55,7 @@ class GmailMailer:
         
         context = {"content": html_body, "subject": subject}
         from jinja2 import Environment, PackageLoader
-        env = Environment(loader=PackageLoader('ai_digest', ''))
+        env = Environment(loader=PackageLoader('prefecture', ''))
         template = env.get_template('email_base.html.j2')
         rendered_html = template.render(context)
         

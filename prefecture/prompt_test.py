@@ -1,7 +1,7 @@
 import os
 import pytest
 from pathlib import Path
-from ai_digest.prompt import PromptGenerator, register_loader, RunDirFileLoader
+from prefecture.prompt import PromptGenerator, register_loader, RunDirFileLoader
 
 # Dummy template for testing
 @pytest.fixture

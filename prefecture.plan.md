@@ -1,4 +1,4 @@
-# Implement `ai-digest` (Prefect Edition)
+# Implement `prefecture` (Prefect Edition)
 
 Implement a data orchestration system using Prefect to generate and deliver AI-authored newsletters, with support for human-in-the-loop editing.
 
@@ -24,14 +24,14 @@ We will implement the project in the following steps:
 - [NEW] `templates/email_base.html.j2`: Jinja2 template for the email.
 
 ### Step 3: Core Modules
-- [NEW] `src/ai_digest/config.py`: Parse YAML configs.
-- [NEW] `src/ai_digest/templating.py`: Handle Jinja rendering and `days_ago` context loader.
-- [NEW] `src/ai_digest/agent.py`: Gemini API client wrapper.
-- [NEW] `src/ai_digest/notify.py`: ntfy.sh notification sender.
-- [NEW] `src/ai_digest/mailer.py`: Gmail API sender.
+- [NEW] `prefecture/config.py`: Parse YAML configs.
+- [NEW] `prefecture/templating.py`: Handle Jinja rendering and `days_ago` context loader.
+- [NEW] `prefecture/agent.py`: Gemini API client wrapper.
+- [NEW] `prefecture/notify.py`: ntfy.sh notification sender.
+- [NEW] `prefecture/mailer.py`: Gmail API sender.
 
 ### Step 4: Prefect Flows
-- [NEW] `src/ai_digest/flows.py`: Define `generate_digest_flow` and `dispatch_digest_flow`.
+- [NEW] `prefecture/flows.py`: Define `generate_digest_flow` and `dispatch_digest_flow`.
 - [NEW] `prefect.yaml`: Prefect deployment configuration.
 
 ---

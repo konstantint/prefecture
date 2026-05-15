@@ -1,7 +1,7 @@
 [project]
-name = "ai-digest"
+name = "prefecture"
 version = "0.1.0"
-description = "AI-authored newsletters with Prefect"
+description = "A Prefect-based system for simple regular data processing jobs (with initial focus on automating AI-generated weekly digests)."
 requires-python = ">=3.10"
 dependencies = [
     "prefect>=3.0.0",
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ai-digest = "ai_digest.cli:main"
+prefecture = "prefecture.cli:main"
 
 [build-system]
 requires = ["hatchling"]

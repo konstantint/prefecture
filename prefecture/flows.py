@@ -3,16 +3,16 @@ from pathlib import Path
 from datetime import datetime
 from prefect import flow
 from prefect.runtime import flow_run
-from ai_digest.config import load_config
-from ai_digest.prompt import PromptGenerator
-from ai_digest.gemini import GeminiGenerator
-from ai_digest.ntfy import NtfySender
-from ai_digest.mailer import GmailMailer
-from ai_digest.google_chat_reader import GoogleChatReader
+from prefecture.config import load_config
+from prefecture.prompt import PromptGenerator
+from prefecture.gemini import GeminiGenerator
+from prefecture.ntfy import NtfySender
+from prefecture.mailer import GmailMailer
+from prefecture.google_chat_reader import GoogleChatReader
 
 def generate_run_name(**kwargs) -> str:
     from prefect.runtime import flow_run
-    from ai_digest.config import load_config
+    from prefecture.config import load_config
     from datetime import datetime
     
     config_file = kwargs.get("config_file") or flow_run.parameters.get("config_file")
@@ -25,7 +25,7 @@ def generate_run_name(**kwargs) -> str:
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     return f"{name}-{run_id}"
 
-@flow(name="ai-digest", log_prints=True, flow_run_name=generate_run_name)
+@flow(name="prefecture", log_prints=True, flow_run_name=generate_run_name)
 def run_flow(config_file: str):
     config = load_config(config_file)
     

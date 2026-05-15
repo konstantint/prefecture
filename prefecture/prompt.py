@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 from prefect import task
 from prefect.cache_policies import NO_CACHE
-from ai_digest.templating import render_template
+from prefecture.templating import render_template
 
 class ContextLoader:
     def __call__(self, run_dir: Path) -> str:

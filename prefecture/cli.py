@@ -2,14 +2,14 @@ import sys
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from ai_digest.flows import run_flow
+from prefecture.flows import run_flow
 
 def main():
     # Load .env from current working directory only
     load_dotenv(dotenv_path=Path(".env"), override=True)
     
     if len(sys.argv) < 2:
-        print("Usage: ai-digest <path_to_config.yaml>")
+        print("Usage: prefecture <path_to_config.yaml>")
         sys.exit(1)
         
     config_file = sys.argv[1]

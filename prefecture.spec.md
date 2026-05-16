@@ -47,14 +47,26 @@ When used by a user, they can create a directory with their own configs and temp
 ## 4. Configuration Strategy (YAML + Prefect)
 
 We use a step-based configuration approach. The YAML file defines a list of steps to execute.
+Each step is defined by its class path (e.g., `python.module.PythonClass`) or a shorthand name for built-in components.
+
+Built-in shorthand mapping:
+*   `prompt`: `prefecture.prompt.PromptGenerator`
+*   `gemini`: `prefecture.gemini.GeminiGenerator`
+*   `mailer`: `prefecture.mailer.GmailMailer`
+*   `ntfy`: `prefecture.ntfy.NtfySender`
+*   `google_chat_reader`: `prefecture.google_chat_reader.GoogleChatReader`
 
 ### A. Business Logic: `configs/<name>.yaml`
 Defines the content and delivery of the digest. Supports environment variable substitution using `$VAR` or `${VAR}`.
+Also supports an optional top-level `prepend_to_pythonpath` list of paths to prepend to `PYTHONPATH` (`sys.path`) before flow execution, allowing custom step modules to be imported from the working directory.
+
 
 Example `generate.yaml`:
 ```yaml
 name: "baby_digest_generate"
+prepend_to_pythonpath: ["."]
 steps:
+
   - prompt:
       template_file: "../templates/baby_prompt.j2"
       context_loaders:

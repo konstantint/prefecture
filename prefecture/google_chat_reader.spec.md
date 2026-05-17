@@ -10,6 +10,8 @@ The component is parameterized in the YAML config under `google_chat_reader`:
 google_chat_reader:
   max_hours_ago: <int>  # Optional. Limit messages by age in hours.
   max_messages: 1500    # Optional. Limit messages by count per space.
+  num_retries: 5        # Optional. Maximum number of retry attempts for transient errors. Default: 5.
+  initial_backoff: 1.0  # Optional. Initial wait time in seconds before first retry. Default: 1.0.
   client_id: "$GOOGLE_CHAT_CLIENT_ID" # OAuth Client ID
   client_secret: "$GOOGLE_CHAT_CLIENT_SECRET" # OAuth Client Secret
   refresh_token: "$GOOGLE_CHAT_REFRESH_TOKEN" # OAuth Refresh Token with Chat scopes
@@ -23,6 +25,7 @@ google_chat_reader:
 ## 3. Behavior
 For each space listed in the configuration:
 1.  Fetch messages up to `max_messages` or limited by `max_hours_ago`.
+    *   **Retry Logic:** If a request to fetch messages fails with a transient error (HTTP status 429, 503, or error message containing `THROTTLED_TASK_LIMIT`), the reader will automatically retry the request up to `num_retries` times using exponential backoff with jitter.
 2.  Save the raw JSON response from the API to `<run_dir>/chat/raw/<space-name-slug>.json`.
     *   `<space-name-slug>` is generated from `display_name` using `python-slugify`.
 3.  Filter out messages from bots (`sender.type == "BOT"`).

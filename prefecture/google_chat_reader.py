@@ -28,6 +28,8 @@ class GoogleChatReader:
         spaces: list[dict[str, typing.Any]],
         max_messages: int | None = None,
         max_hours_ago: int | None = None,
+        num_retries: int = 5,
+        initial_backoff: float = 1.0,
     ):
         """Initializes the GoogleChatReader."""
         self.config_dir = config_dir
@@ -37,6 +39,8 @@ class GoogleChatReader:
         self.spaces = spaces
         self.max_messages = max_messages
         self.max_hours_ago = max_hours_ago
+        self.num_retries = num_retries
+        self.initial_backoff = initial_backoff
 
     def _get_credentials(self) -> credentials.Credentials:
         """Gets Google API credentials."""
@@ -54,6 +58,40 @@ class GoogleChatReader:
             print(f"Failed to refresh token: {e}")
             raise
         return creds
+
+    def _execute_request_with_retry(self, request: typing.Any) -> typing.Any:
+        """Executes a Google API request with retry logic."""
+        import time
+        import random
+        from googleapiclient.errors import HttpError
+
+        max_attempts = self.num_retries + 1
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return request.execute()
+            except HttpError as e:
+                if attempt == max_attempts:
+                    print(f"Failed to execute request after {max_attempts} attempts.")
+                    raise
+
+                status = e.resp.status
+                content_str = e.content.decode('utf-8') if isinstance(e.content, bytes) else str(e.content)
+
+                is_retryable = (
+                    status in [429, 503] or
+                    "THROTTLED_TASK_LIMIT" in content_str
+                )
+
+                if is_retryable:
+                    # Exponential backoff with jitter
+                    sleep_time = (self.initial_backoff * (2 ** (attempt - 1))) + random.random()
+                    print(
+                        f"Attempt {attempt} failed with status {status} (retryable). "
+                        f"Retrying in {sleep_time:.2f} seconds... Error: {content_str.strip()}"
+                    )
+                    time.sleep(sleep_time)
+                else:
+                    raise
 
     @prefect.task(name="GoogleChatReader")
     def __call__(self, run_dir: str) -> None:
@@ -101,7 +139,7 @@ class GoogleChatReader:
                     pageSize=1000,
                     pageToken=page_token
                 )
-                response = request.execute()
+                response = self._execute_request_with_retry(request)
                 
                 batch = response.get('messages', [])
                 if not batch:

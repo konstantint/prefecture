@@ -54,6 +54,7 @@ Built-in shorthand mapping:
 *   `mailer`: `prefecture.mailer.GmailMailer`
 *   `ntfy`: `prefecture.ntfy.NtfySender`
 *   `google_chat_reader`: `prefecture.google_chat_reader.GoogleChatReader`
+*   `copyfile`: `prefecture.copyfile.CopyFile`
 
 ### A. Business Logic: `configs/<name>.yaml`
 Defines the content and delivery of the digest. Supports environment variable substitution using `$VAR` or `${VAR}`.
@@ -141,6 +142,10 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Reads messages from Google Chat spaces.
 *   Uses OAuth 2.0 for authentication.
 *   Saves raw JSON and simplified `data.json`.
+
+### F. `copyfile.CopyFile`
+*   Copies a file from `from_path` to `to_path`.
+*   Paths are resolved relative to `run_dir` if they are not absolute.
 
 ## 6. Flows
 

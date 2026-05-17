@@ -20,7 +20,7 @@ def test_env(tmp_path):
         f.write(f"""
 name: test_shorthand
 steps:
-  - prompt:
+  - jinja2:
       template_file: "{template_file}"
       output_file_name: "prompt.md"
       params:
@@ -32,7 +32,7 @@ steps:
         f.write(f"""
 name: test_fullclass
 steps:
-  - prefecture.prompt.PromptGenerator:
+  - prefecture.templating.Jinja2Templater:
       template_file: "{template_file}"
       output_file_name: "prompt.md"
       params:

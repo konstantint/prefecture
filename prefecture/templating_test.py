@@ -1,8 +1,9 @@
-"""Tests for prompt generation in Prefecture."""
+"""Tests for Jinja2 templating in Prefecture."""
 
 import pathlib
+from unittest import mock
 
-from prefecture import prompt
+from prefecture import templating
 import pytest
 
 
@@ -16,21 +17,21 @@ def test_template_dir(tmp_path):
     return tmp_path
 
 
-def test_generate_prompt_only_params(test_template_dir):
-    """Test prompt generation with only parameters."""
+def test_generate_template_only_params(test_template_dir):
+    """Test template rendering with only parameters."""
     prompt_config = {
         "template_file": "test_prompt.j2",
         "params": {"name": "World", "last_weeks_digest": "None"},
     }
-    generator = prompt.PromptGenerator(
+    generator = templating.Jinja2Templater(
         config_dir=test_template_dir, **prompt_config
     )
     generated_prompt = generator(run_dir=test_template_dir)
     assert generated_prompt == "Hello World! Previous: None"
 
 
-def test_generate_prompt_with_loader(test_template_dir):
-    """Test prompt generation with a context loader."""
+def test_generate_template_with_loader(test_template_dir):
+    """Test template rendering with a context loader."""
     # Create mock data directory with date format
     run_dir = test_template_dir / "2023-10-25"
     run_dir.mkdir()
@@ -50,15 +51,15 @@ def test_generate_prompt_with_loader(test_template_dir):
         ],
     }
 
-    generator = prompt.PromptGenerator(
+    generator = templating.Jinja2Templater(
         config_dir=test_template_dir, **prompt_config
     )
     generated_prompt = generator(run_dir=run_dir)
     assert generated_prompt == "Hello LoaderTest! Previous: Old content"
 
 
-def test_generate_prompt_with_loader_remap(test_template_dir):
-    """Test prompt generation with loader and variable remapping."""
+def test_generate_template_with_loader_remap(test_template_dir):
+    """Test template rendering with loader and variable remapping."""
     # Create mock data directory with date format
     run_dir = test_template_dir / "2023-10-25"
     run_dir.mkdir()
@@ -83,7 +84,7 @@ def test_generate_prompt_with_loader_remap(test_template_dir):
     }
 
     try:
-        generator = prompt.PromptGenerator(
+        generator = templating.Jinja2Templater(
             config_dir=test_template_dir, **prompt_config
         )
         generated_prompt = generator(run_dir=run_dir)
@@ -119,7 +120,7 @@ def test_run_dir_file_loader_days_ago(test_template_dir):
         ],
     }
 
-    generator = prompt.PromptGenerator(
+    generator = templating.Jinja2Templater(
         config_dir=test_template_dir, **prompt_config
     )
     generated_prompt = generator(run_dir=run_dir)
@@ -145,17 +146,63 @@ def test_run_dir_file_loader_fail_on_error(test_template_dir):
         ],
     }
 
-    generator = prompt.PromptGenerator(
+    generator = templating.Jinja2Templater(
         config_dir=test_template_dir, **prompt_config
     )
     generated_prompt = generator(run_dir=run_dir)
     assert generated_prompt == "Hello LoaderTest! Previous: None"
 
     prompt_config["context_loaders"][0]["params"]["fail_on_error"] = True
-    generator = prompt.PromptGenerator(
+    generator = templating.Jinja2Templater(
         config_dir=test_template_dir, **prompt_config
     )
 
     with pytest.raises(ValueError) as exc_info:
         generator(run_dir=run_dir)
     assert "could not load" in str(exc_info.value)
+
+
+def test_artifact_key_generation(test_template_dir):
+    """Test that the Prefect artifact key is generated from output_file_name."""
+    prompt_config = {
+        "template_file": "test_prompt.j2",
+        "output_file_name": "My-Special_Prompt.md.tmp",
+        "params": {"name": "World", "last_weeks_digest": "None"},
+    }
+    generator = templating.Jinja2Templater(
+        config_dir=test_template_dir, **prompt_config
+    )
+
+    with mock.patch(
+        "prefect.artifacts.create_markdown_artifact"
+    ) as mock_create_artifact:
+        generator(run_dir=test_template_dir)
+
+        mock_create_artifact.assert_called_once_with(
+            key="my-special-prompt-md",
+            markdown="Hello World! Previous: None",
+            description="Rendered Template",
+        )
+
+
+def test_artifact_key_generation_fallback(test_template_dir):
+    """Test that Prefect artifact key falls back to 'jinja2' if no output_file_name."""
+    prompt_config = {
+        "template_file": "test_prompt.j2",
+        "params": {"name": "World", "last_weeks_digest": "None"},
+    }
+    generator = templating.Jinja2Templater(
+        config_dir=test_template_dir, **prompt_config
+    )
+
+    with mock.patch(
+        "prefect.artifacts.create_markdown_artifact"
+    ) as mock_create_artifact:
+        generator(run_dir=test_template_dir)
+
+        mock_create_artifact.assert_called_once_with(
+            key="jinja2",
+            markdown="Hello World! Previous: None",
+            description="Rendered Template",
+        )
+

@@ -1,18 +1,18 @@
-# Specification: Prompt Generation and Context Loading
+# Specification: Templating and Context Loading
 
-This document describes how prompts are generated and how context is loaded in `prefecture`.
+This document describes how templates are rendered and how context is loaded in `prefecture`.
 
 ## 1. Overview
-Prompt generation is handled by the `PromptGenerator` class. It combines a Jinja2 template with dynamic context loaded by `ContextLoader` implementations and static parameters.
+Template rendering is handled by the `Jinja2Templater` class inside `templating.py`. It combines a Jinja2 template with dynamic context loaded by `ContextLoader` implementations and static parameters.
 
-## 2. PromptGenerator
-`PromptGenerator` is a callable component (decorated with `@task` for Prefect).
+## 2. Jinja2Templater
+`Jinja2Templater` is a callable component (decorated with `@task` for Prefect).
 
 ### Configuration
 It accepts the following parameters in `__init__`:
 - `config_dir`: Path to the directory containing the configuration file. Used to resolve relative template paths.
 - `template_file`: Path to the Jinja2 template file.
-- `output_file_name`: Optional. If provided, the rendered prompt will be written to this file in the `run_dir`.
+- `output_file_name`: Optional. If provided, the rendered template will be written to this file in the `run_dir`.
 - `context_loaders`: List of context loader configurations.
 - `params`: Static parameters to pass to the template.
 
@@ -26,7 +26,7 @@ When called with `run_dir`:
 6.  It merges static `params` into the context.
 7.  It renders the template.
 8.  It saves the output if `output_file_name` was provided.
-9.  It creates a Prefect markdown artifact.
+9.  It creates a Prefect markdown artifact named after the sanitized stem of `output_file_name` (falling back to "jinja2" if not provided).
 
 ## 3. Context Loaders
 Context loaders are classes that implement the `ContextLoader` protocol.
@@ -53,7 +53,7 @@ Constructor parameters:
 ## 4. YAML Configuration Example
 ```yaml
 steps:
-  - prompt:
+  - jinja2:
       template_file: "../templates/prompt.j2"
       output_file_name: "prompt.md"
       context_loaders:

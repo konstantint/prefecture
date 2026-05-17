@@ -68,7 +68,7 @@ steps:
         - id: "<some-chat-id>"
           display_name: "Chat-display-name"
       max_messages: 100
-  - prompt:
+  - jinja2:
       template_file: "../templates/prompt.j2" # Relative to config file
       output_file_name: "prompt.md"
   - gemini:

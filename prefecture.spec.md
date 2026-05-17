@@ -21,8 +21,7 @@ The package is structured as follows:
     ├── __init__.py
     ├── cli.py                # CLI entry point
     ├── config.py             # Parses YAML configs with env var substitution
-    ├── templating.py         # Low-level Jinja rendering helper
-    ├── prompt.py             # PromptGenerator class & context loaders
+    ├── templating.py         # Jinja2Templater class, context loaders, & rendering helper
     ├── gemini.py             # GeminiGenerator class
     ├── google_chat_reader.py # GoogleChatReader class
     ├── ntfy.py               # NtfySender class
@@ -50,7 +49,7 @@ We use a step-based configuration approach. The YAML file defines a list of step
 Each step is defined by its class path (e.g., `python.module.PythonClass`) or a shorthand name for built-in components.
 
 Built-in shorthand mapping:
-*   `prompt`: `prefecture.prompt.PromptGenerator`
+*   `jinja2`: `prefecture.templating.Jinja2Templater`
 *   `gemini`: `prefecture.gemini.GeminiGenerator`
 *   `mailer`: `prefecture.mailer.GmailMailer`
 *   `ntfy`: `prefecture.ntfy.NtfySender`
@@ -67,7 +66,7 @@ name: "baby_digest_generate"
 prepend_to_pythonpath: ["."]
 steps:
 
-  - prompt:
+  - jinja2:
       template_file: "../templates/baby_prompt.j2"
       context_loaders:
         - type: "run_dir_file"
@@ -113,12 +112,12 @@ The intended usage is to run `prefecture` with its dependencies using Docker as 
 
 All components are classes with a `__call__` method decorated with `@task`. They accept `config_dir` in `__init__` and `run_dir` in `__call__`.
 
-### A. `prompt.PromptGenerator`
+### A. `templating.Jinja2Templater`
 *   Loads template (resolved relative to config file).
 *   Executes registered context loaders.
 *   Applies `params`.
 *   Writes output to `run_dir / output_file_name`.
-*   Publishes a Prefect markdown artifact named "prompt".
+*   Publishes a Prefect markdown artifact named after the sanitized stem of `output_file_name` (falling back to "jinja2" if not provided).
 
 ### B. `gemini.GeminiGenerator`
 *   Reads prompt from `run_dir / prompt_file_name`.

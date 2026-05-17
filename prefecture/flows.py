@@ -13,7 +13,7 @@ from prefect import runtime
 from prefecture import config
 
 STEP_MAP = {
-    "prompt": "prefecture.prompt.PromptGenerator",
+    "jinja2": "prefecture.templating.Jinja2Templater",
     "gemini": "prefecture.gemini.GeminiGenerator",
     "ntfy": "prefecture.ntfy.NtfySender",
     "mailer": "prefecture.mailer.GmailMailer",

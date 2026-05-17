@@ -50,6 +50,16 @@ Constructor parameters:
 - `days_ago`: Number of days to look back. Default is 0 (current run dir).
 - `fail_on_error`: If True, raises `ValueError` if file cannot be loaded. If False, returns `None`. Default is False.
 
+### `SqlAlchemyLoader`
+Loads data from a database using SQLAlchemy.
+Registered name: `"sqlalchemy"`
+
+Constructor parameters:
+- `db_url`: The SQLAlchemy database URL (e.g. `sqlite:////path/to/db`).
+- `query`: The SQL query to execute.
+
+The loader returns a list of dictionaries, where each dictionary represents a row in the result set (mapping column names to values).
+
 ## 4. YAML Configuration Example
 ```yaml
 steps:

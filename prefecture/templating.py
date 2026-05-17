@@ -1,12 +1,14 @@
 """Templating utilities for Prefecture."""
 
 import datetime
+import json
 import os
 import pathlib
 import re
 
 import jinja2
 import prefect
+import sqlalchemy
 from prefect import artifacts
 from prefect import cache_policies
 
@@ -24,7 +26,7 @@ def render_template(template_path: pathlib.Path, context: dict) -> str:
 class ContextLoader:
     """Base class for context loaders."""
 
-    def __call__(self, run_dir: pathlib.Path) -> str:
+    def __call__(self, run_dir: pathlib.Path) -> object:
         raise NotImplementedError
 
 
@@ -40,14 +42,19 @@ class RunDirFileLoader(ContextLoader):
     """Loads the contents of a file in the run_dir."""
 
     def __init__(
-        self, file_name: str, days_ago: int = 0, fail_on_error: bool = False
+        self,
+        file_name: str,
+        days_ago: int = 0,
+        fail_on_error: bool = False,
+        load_json: bool = False,
     ):
         """Initializes the RunDirFileLoader."""
         self.file_name = file_name
         self.days_ago = days_ago
         self.fail_on_error = fail_on_error
+        self.load_json = load_json
 
-    def __call__(self, run_dir: pathlib.Path) -> str | None:
+    def __call__(self, run_dir: pathlib.Path) -> object:
         """Loads content from file."""
         if self.days_ago == 0:
             target_path = run_dir / self.file_name
@@ -68,16 +75,41 @@ class RunDirFileLoader(ContextLoader):
                     )
                 return None
 
+        content = None
         try:
-            with open(target_path, "r") as f:
-                return f.read()
+            with open(target_path, "r", encoding="utf-8") as f:
+                content = f.read()
         except Exception as e:
             if self.fail_on_error:
                 raise ValueError(f"could not load {target_path}: {e}")
             return None
 
+        if self.load_json:
+            return json.loads(content)
+        return content
+
+
+class SqlAlchemyLoader(ContextLoader):
+    """Loads data from a database using SQLAlchemy."""
+
+    def __init__(self, db_url: str, query: str):
+        """Initializes the SqlAlchemyLoader."""
+        self.db_url = db_url
+        self.query = query
+
+    def __call__(self, run_dir: pathlib.Path) -> object:
+        """Executes the query and returns results as a list of dicts."""
+        engine = sqlalchemy.create_engine(self.db_url)
+        try:
+            with engine.connect() as connection:
+                result = connection.execute(sqlalchemy.text(self.query))
+                return [dict(row) for row in result.mappings()]
+        except Exception as e:
+            raise ValueError(f"Database query failed: {e}")
+
 
 register_loader("run_dir_file", RunDirFileLoader)
+register_loader("sqlalchemy", SqlAlchemyLoader)
 
 
 class Jinja2Templater:

@@ -95,43 +95,38 @@ class GoogleChatReader:
             page_token = None
             
             while True:
-                try:
-                    parent = f"spaces/{space_id}"
-                    request = service.spaces().messages().list(
-                        parent=parent,
-                        pageSize=100,
-                        pageToken=page_token
-                    )
-                    response = request.execute()
+                parent = f"spaces/{space_id}"
+                request = service.spaces().messages().list(
+                    parent=parent,
+                    pageSize=1000,
+                    pageToken=page_token
+                )
+                response = request.execute()
+                
+                batch = response.get('messages', [])
+                if not batch:
+                    break
                     
-                    batch = response.get('messages', [])
-                    if not batch:
-                        break
-                        
-                    for msg in batch:
-                        if cutoff_time:
-                            create_time_str = msg.get('createTime')
-                            if create_time_str:
-                                if create_time_str.endswith('Z'):
-                                    create_time_str = create_time_str[:-1]
-                                create_time = datetime.datetime.fromisoformat(create_time_str)
-                                if create_time < cutoff_time:
-                                    continue
-                        
-                        messages.append(msg)
-                        
-                        if self.max_messages and len(messages) >= self.max_messages:
-                            break
-                            
+                for msg in batch:
+                    if cutoff_time:
+                        create_time_str = msg.get('createTime')
+                        if create_time_str:
+                            if create_time_str.endswith('Z'):
+                                create_time_str = create_time_str[:-1]
+                            create_time = datetime.datetime.fromisoformat(create_time_str)
+                            if create_time < cutoff_time:
+                                continue
+                    
+                    messages.append(msg)
+                    
                     if self.max_messages and len(messages) >= self.max_messages:
                         break
                         
-                    page_token = response.get('nextPageToken')
-                    if not page_token:
-                        break
-                        
-                except Exception as e:
-                    print(f"Error fetching messages for {display_name}: {e}")
+                if self.max_messages and len(messages) >= self.max_messages:
+                    break
+                    
+                page_token = response.get('nextPageToken')
+                if not page_token:
                     break
 
             # Save raw data
@@ -142,25 +137,8 @@ class GoogleChatReader:
 
             # Process for union
             for msg in messages:
-                if msg.get('sender', {}).get('type') == 'BOT':
-                    continue
-                    
-                text = msg.get('text', '')
-                
-                # Construct link
-                chat_link = ''
-                if 'name' in msg:
-                    parts = msg['name'].split('/')
-                    if len(parts) >= 4:
-                        s_id = parts[1]
-                        m_id = parts[3].split('.')[0]
-                        chat_link = f"https://chat.google.com/room/{s_id}/{m_id}"
-                        
-                all_messages.append({
-                    'space': display_name,
-                    'text': text,
-                    'link': chat_link
-                })
+                msg['space']['displayName'] = display_name
+                all_messages.append(msg)
 
         # Save union data
         data_file = os.path.join(run_dir, 'chat', 'data.json')

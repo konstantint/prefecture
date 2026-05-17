@@ -16,6 +16,7 @@ dependencies = [
     "google-auth-httplib2",
     "google-auth-oauthlib",
     "python-slugify",
+    "sqlalchemy",
 ]
 
 [project.scripts]

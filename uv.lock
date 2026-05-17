@@ -1655,6 +1655,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-slugify" },
     { name = "requests" },
+    { name = "sqlalchemy" },
 ]
 
 [package.metadata]
@@ -1671,6 +1672,7 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "python-slugify" },
     { name = "requests" },
+    { name = "sqlalchemy" },
 ]
 
 [[package]]

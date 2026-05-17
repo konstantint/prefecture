@@ -30,13 +30,15 @@ For each space listed in the configuration:
 5.  Extract required fields: `space` (display name), `text` (message content), `link` (message link).
 
 After processing all spaces:
-1.  Create a file `<run_dir>/chat/data.json` that contains a simplified union of all fetched messages with the following structure:
+1.  Create a file `<run_dir>/chat/data.json` that contains a union of all fetched messages with the addition of a `space.displayName` field that contains the display name of the space, as passed in the argument:
     ```json
     [
       {
-        "space": "Space Name",
-        "text": "Message text content",
-        "link": "https://chat.google.com/room/.../..."
+        "space": {
+            "name": "spaces/AAAANPQ7Dow"
+            "displayName": "!Knock"
+        }
+        ... all other fields from the original output ...
       },
       ...
     ]
@@ -58,7 +60,7 @@ To test the component, run it with the following parameters:
 
 Verify that:
 - `<run_dir>/chat/raw/knock.json` is created and contains raw messages.
-- `<run_dir>/chat/data.json` is created and contains simplified messages.
+- `<run_dir>/chat/data.json` is created and contains the messages with the space/displayName value.
 
 ## 6. Enabling API and Credentials
 

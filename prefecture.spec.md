@@ -115,7 +115,12 @@ All components are classes with a `__call__` method decorated with `@task`. They
 
 ### A. `templating.Jinja2Templater`
 *   Loads template (resolved relative to config file).
-*   Executes registered context loaders.
+*   Executes registered context loaders (e.g., `run_dir_file` which maps to `RunDirFileLoader`).
+    *   `RunDirFileLoader` supports parameters:
+        *   `file_name` (str): File to load from `run_dir`.
+        *   `days_ago` (int): Optional lookback to load from previous date directories.
+        *   `fail_on_error` (bool): Optional flag to raise errors on missing/failed file reads.
+        *   `load_json` (bool): Optional flag to parse the file content as JSON, loading the resulting structured object (not just raw string) into the template context. JSON parsing errors will always propagate and crash the templating step.
 *   Applies `params`.
 *   Writes output to `run_dir / output_file_name`.
 *   Publishes a Prefect markdown artifact named after the sanitized stem of `output_file_name` (falling back to "jinja2" if not provided).

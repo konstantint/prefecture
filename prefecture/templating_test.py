@@ -319,3 +319,34 @@ def test_sqlalchemy_loader(test_template_dir):
             template_file.unlink()
 
 
+def test_datetime_now_loader(test_template_dir):
+    """Test DatetimeNowLoader renders current date in template."""
+    # Create a template that uses datetime_now and formats it
+    template_file = test_template_dir / "test_datetime.j2"
+    with open(template_file, "w", encoding="utf-8") as f:
+        f.write("Current year: {{ now.strftime('%Y') }}")
+
+    prompt_config = {
+        "template_file": "test_datetime.j2",
+        "context_loaders": [
+            {
+                "type": "datetime_now",
+                "assign_to": "now",
+            }
+        ],
+    }
+
+    try:
+        generator = templating.Jinja2Templater(
+            config_dir=test_template_dir, **prompt_config
+        )
+        generated_prompt = generator(run_dir=test_template_dir)
+        import datetime
+        expected_year = datetime.datetime.now().strftime("%Y")
+        assert generated_prompt == f"Current year: {expected_year}"
+    finally:
+        if template_file.exists():
+            template_file.unlink()
+
+
+

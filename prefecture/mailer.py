@@ -10,7 +10,7 @@ import sys
 
 import dotenv
 import jinja2
-import markdown
+from markdown_it import MarkdownIt
 import premailer
 import prefect
 from prefect import cache_policies
@@ -72,7 +72,8 @@ class GmailMailer:
             body = md_content
 
         # Compile HTML
-        html_body = markdown.markdown(body)
+        md = MarkdownIt('gfm-like')
+        html_body = md.render(body)
 
         context = {"content": html_body, "subject": subject}
 

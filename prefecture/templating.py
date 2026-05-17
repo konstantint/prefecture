@@ -108,8 +108,21 @@ class SqlAlchemyLoader(ContextLoader):
             raise ValueError(f"Database query failed: {e}")
 
 
+class DatetimeNowLoader(ContextLoader):
+    """Loads the current datetime."""
+
+    def __init__(self):
+        """Initializes the DatetimeNowLoader."""
+        pass
+
+    def __call__(self, run_dir: pathlib.Path) -> object:
+        """Returns the current local datetime."""
+        return datetime.datetime.now()
+
+
 register_loader("run_dir_file", RunDirFileLoader)
 register_loader("sqlalchemy", SqlAlchemyLoader)
+register_loader("datetime_now", DatetimeNowLoader)
 
 
 class Jinja2Templater:

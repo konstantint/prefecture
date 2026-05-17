@@ -7,7 +7,7 @@ dependencies = [
     "prefect>=3.0.0",
     "google-genai",
     "Jinja2",
-    "markdown",
+    "markdown-it-py[linkify]",
     "premailer",
     "requests",
     "python-dotenv",

@@ -114,39 +114,3 @@ class GmailMailer:
             raise
 
 
-if __name__ == "__main__":
-    # Load environment variables from .env file if it exists in CWD
-    dotenv.load_dotenv(override=True)
-
-    print("Testing GmailMailer...")
-
-    if len(sys.argv) < 2:
-        print("Usage: python mailer.py <target_email>")
-        print(
-            "Test mode: Not sending any emails because no target email provided."
-        )
-        sys.exit(0)
-
-    target_email = sys.argv[1]
-    print(f"Target email: {target_email}")
-
-    # Create a dummy markdown content with frontmatter
-    md_content = """---
-subject: Test Frontmatter Subject
----
-# Test Digest
-This is a **test** digest email with frontmatter.
-"""
-
-    # Note: This will fail because __init__ requires more arguments now.
-    gmail_mailer = GmailMailer(
-        gmail_client_id=os.environ.get("GMAIL_CLIENT_ID"),
-        gmail_client_secret=os.environ.get("GMAIL_CLIENT_SECRET"),
-        gmail_refresh_token=os.environ.get("GMAIL_REFRESH_TOKEN"),
-        recipients=[target_email],
-    )
-
-    try:
-        gmail_mailer(md_content)
-    except Exception as e:
-        print(f"Error in mailer test: {e}")

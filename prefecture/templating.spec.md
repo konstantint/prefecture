@@ -49,6 +49,7 @@ Constructor parameters:
 - `file_name`: Name of the file to load.
 - `days_ago`: Number of days to look back. Default is 0 (current run dir).
 - `fail_on_error`: If True, raises `ValueError` if file cannot be loaded. If False, returns `None`. Default is False.
+- `load_json`: If True, parses the loaded file content as JSON. Default is False.
 
 ### `SqlAlchemyLoader`
 Loads data from a database using SQLAlchemy.
@@ -59,6 +60,13 @@ Constructor parameters:
 - `query`: The SQL query to execute.
 
 The loader returns a list of dictionaries, where each dictionary represents a row in the result set (mapping column names to values).
+
+### `DatetimeNowLoader`
+Loads the current local datetime.
+Registered name: `"datetime_now"`
+
+Accepts no arguments. Returns the current local `datetime.datetime` object.
+
 
 ## 4. YAML Configuration Example
 ```yaml

@@ -87,19 +87,3 @@ class NtfySender:
             print(f"Error sending notification: {e}")
 
 
-if __name__ == "__main__":
-    dotenv.load_dotenv(override=True)
-
-    print("Testing NtfySender...")
-    topic = os.environ.get("NTFY_TOPIC", "test")
-    host = os.environ.get("NTFY_HOST", "https://ntfy.sh")
-    user = os.environ.get("NTFY_USER")
-    password = os.environ.get("NTFY_PASSWORD")
-
-    # Note: This will fail because __init__ requires config_dir.
-    sender = NtfySender(host=host, user=user, password=password, topic=topic)
-
-    try:
-        sender("This is a test notification from NtfySender class.")
-    except Exception as e:
-        print(f"Error in ntfy test: {e}")

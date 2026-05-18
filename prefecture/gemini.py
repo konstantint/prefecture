@@ -76,20 +76,3 @@ class GeminiGenerator:
         return full_text
 
 
-if __name__ == "__main__":
-    dotenv.load_dotenv(override=True)
-
-    print("Testing GeminiGenerator...")
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("GEMINI_API_KEY not set in .env")
-        sys.exit(1)
-
-    # Note: This will fail because __init__ requires more arguments now.
-    generator = GeminiGenerator(api_key=api_key)
-    test_prompt = "Tell me a short joke."
-    try:
-        result = generator(test_prompt)
-        print(f"Result:\n{result}")
-    except Exception as e:
-        print(f"Error: {e}")

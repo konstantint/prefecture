@@ -1,7 +1,7 @@
 # Specification: `prefecture/google_chat_reader.py`
 
 ## 1. Overview
-The `GoogleChatReader` component is responsible for fetching recent messages from specified Google Chat spaces and storing them in both raw and simplified formats. It uses the Google Chat API with OAuth 2.0 authentication.
+The `GoogleChatReader` component is responsible for fetching recent messages from specified Google Chat spaces and storing the raw responses as well as a single combined file. It uses the Google Chat API with OAuth 2.0 authentication.
 
 ## 2. Configuration
 The component is parameterized in the YAML config under `google_chat_reader`:
@@ -28,9 +28,6 @@ For each space listed in the configuration:
     *   **Retry Logic:** If a request to fetch messages fails with a transient error (HTTP status 429, 503, or error message containing `THROTTLED_TASK_LIMIT`), the reader will automatically retry the request up to `num_retries` times using exponential backoff with jitter.
 2.  Save the raw JSON response from the API to `<run_dir>/chat/raw/<space-name-slug>.json`.
     *   `<space-name-slug>` is generated from `display_name` using `python-slugify`.
-3.  Filter out messages from bots (`sender.type == "BOT"`).
-4.  Construct a direct link to the message if possible (see `ai_chat_summary.py` logic).
-5.  Extract required fields: `space` (display name), `text` (message content), `link` (message link).
 
 After processing all spaces:
 1.  Create a file `<run_dir>/chat/data.json` that contains a union of all fetched messages with the addition of a `space.displayName` field that contains the display name of the space, as passed in the argument:

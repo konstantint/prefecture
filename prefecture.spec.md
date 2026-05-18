@@ -6,7 +6,7 @@
 ## 2. Core Technologies
 *   **Orchestration:** Prefect 3.x
 *   **AI SDK:** `google-genai` (Native Google API client)
-*   **Templating & Formatting:** `Jinja2`, `markdown`, `premailer`
+*   **Templating & Formatting:** `Jinja2`, `markdown-it-py`, `premailer`
 *   **Alerting:** `requests` (for `ntfy` webhooks)
 *   **Environment Management:** `uv`, `python-dotenv`
 
@@ -115,12 +115,17 @@ All components are classes with a `__call__` method decorated with `@task`. They
 
 ### A. `templating.Jinja2Templater`
 *   Loads template (resolved relative to config file).
-*   Executes registered context loaders (e.g., `run_dir_file` which maps to `RunDirFileLoader`).
-    *   `RunDirFileLoader` supports parameters:
+*   Executes registered context loaders:
+    *   `run_dir_file` (maps to `RunDirFileLoader`):
         *   `file_name` (str): File to load from `run_dir`.
-        *   `days_ago` (int): Optional lookback to load from previous date directories.
-        *   `fail_on_error` (bool): Optional flag to raise errors on missing/failed file reads.
-        *   `load_json` (bool): Optional flag to parse the file content as JSON, loading the resulting structured object (not just raw string) into the template context. JSON parsing errors will always propagate and crash the templating step.
+        *   `days_ago` (int): Optional lookback to load from previous date directories (default `0`).
+        *   `fail_on_error` (bool): Optional flag to raise errors on missing/failed file reads (default `False`).
+        *   `load_json` (bool): Optional flag to parse the file content as JSON, loading the resulting structured object (not just raw string) into the template context. JSON parsing errors will always propagate and crash the templating step (default `False`).
+    *   `sqlalchemy` (maps to `SqlAlchemyLoader`):
+        *   `db_url` (str): The database connection URL (e.g., `sqlite:///demos.db`).
+        *   `query` (str): The SQL query to execute. Returns a list of dictionaries representing the result set mapping column names to values.
+    *   `datetime_now` (maps to `DatetimeNowLoader`):
+        *   Accepts no arguments. Returns the current local datetime.
 *   Applies `params`.
 *   Writes output to `run_dir / output_file_name`.
 *   Publishes a Prefect markdown artifact named after the sanitized stem of `output_file_name` (falling back to "jinja2" if not provided).
@@ -129,7 +134,6 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Reads prompt from `run_dir / prompt_file_name`.
 *   Uses `google-genai` SDK.
 *   Supports optional Google Search grounding via `use_google_search` parameter.
-*   Instructs Gemini to output markdown with YAML frontmatter containing `subject`.
 *   Writes output to `run_dir / output_file_name`.
 *   Publishes a Prefect markdown artifact named "digest".
 

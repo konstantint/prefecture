@@ -1,0 +1,33 @@
+name: weekly-digest
+steps:
+  - jinja2:
+      template_file: prompt.j2
+      params:
+        name: Max Muster
+        address: Amsterdam, Netherlands
+        interests: Juggling, Comedy, Geopolitics
+      context_loaders:
+        - type: run_dir_file
+          assign_to: last_weeks_digest
+          params:
+            days_ago: 7
+            file_name: digest.md
+      output_file_name: prompt.md
+  - gemini:
+      api_key: "$GEMINI_API_KEY"
+      model: gemini-3.1-pro-preview
+      use_google_search: true
+      prompt_file_name: prompt.md
+      output_file_name: digest.md
+  - mailer:
+      gmail_client_id: "$GMAIL_CLIENT_ID"
+      gmail_client_secret: "$GMAIL_CLIENT_SECRET"
+      gmail_refresh_token: "$GMAIL_REFRESH_TOKEN"
+      recipients: ["max.muster@email"]
+      content_file_name: digest.md
+  - ntfy:
+      host: "$NTFY_HOST"
+      user: "$NTFY_USER"
+      password: "$NTFY_PASSWORD"
+      topic: prefecture
+      content: "Mailed weekly digest"

@@ -15,7 +15,23 @@
 
 The intended way is to run `prefecture` with its dependencies is using Docker.
 
-### 1. Start Prefect Infrastructure
+### 1. Project Setup
+
+Copy `example_workdir/` to `workdir/`. The directory has the following
+structure:
+
+```text
+workdir/
+├── .env
+└── configs/weekly_digest/
+    ├── config.yaml
+    ├── prompt.j2
+    └── prefect.yaml
+```
+
+Edit the `.env` file in `workdir`, providing your credentials. Edit `config.yaml` and `prompt.j2` as needed (as a minimum, you'll need to provide your email, name and interests).
+
+### 2. Start Prefect Infrastructure
 
 Start the Prefect server and worker using Docker Compose:
 
@@ -23,96 +39,38 @@ Start the Prefect server and worker using Docker Compose:
 docker compose up -d --build
 ```
 
-### 2. Project Setup
+You should notice the directory `workdir/prefect_data` appear - this is where the Prefect server manages its SQLite database (for fancier setups you might want a fancier database, but this is outside the scope of this doc).
 
-Create a working directory (e.g., `workdir/`) with the following structure:
+### 3. Deploy your flow
 
-```text
-workdir/
-├── prefect.yaml
-├── .env
-├── configs/
-│   └── my_digest.yaml
-└── templates/
-    └── prompt.j2
+```
+./deploy_all.sh
 ```
 
-Create a `.env` file in the root of your job directory with your credentials:
+### 4. Launch Flows
 
-```env
-GEMINI_API_KEY=your_gemini_api_key
-GMAIL_CLIENT_ID=your_gmail_client_id
-GMAIL_CLIENT_SECRET=your_gmail_client_secret
-GMAIL_REFRESH_TOKEN=your_gmail_refresh_token
-GOOGLE_CHAT_CLIENT_ID=your_google_chat_client_id
-GOOGLE_CHAT_CLIENT_SECRET=your_google_chat_client_secret
-GOOGLE_CHAT_REFRESH_TOKEN=your_google_chat_refresh_token
-NTFY_TOPIC=test
-NTFY_HOST=ntfy.sh
-NTFY_USER=
-NTFY_PASSWORD=
-```
-
-### 3. Configuration
-
-Create a configuration file, e.g., `configs/my_digest.yaml`:
-
-```yaml
-name: "my_digest"
-steps:
-  - google_chat_reader:
-      client_id: "$GOOGLE_CHAT_CLIENT_ID"
-      client_secret: "$GOOGLE_CHAT_CLIENT_SECRET"
-      refresh_token: "$GOOGLE_CHAT_REFRESH_TOKEN"
-      spaces:
-        - id: "<some-chat-id>"
-          display_name: "Chat-display-name"
-      max_messages: 100
-  - jinja2:
-      template_file: "../templates/prompt.j2" # Relative to config file
-      output_file_name: "prompt.md"
-  - gemini:
-      api_key: "$GEMINI_API_KEY"
-      model: "gemini-3.1-flash-lite"
-      use_google_search: true
-      prompt_file_name: "prompt.md"
-      output_file_name: "digest.md"
-  - ntfy:
-      host: "$NTFY_HOST"
-      topic: "my_topic"
-      content_file_name: "digest.md"
-```
-
-### 4. Deploy the Digest
-
-Run the deployment command inside the worker container:
-
-```bash
-docker compose exec prefect-worker prefect deploy --all --no-prompt
-```
-
-The `deploy_all.sh` file in this directory does exactly that.
-
-### 5. Launch Flows
-
-You can launch flows manually or manage schedules via the Prefect UI at `http://localhost:4200`.
+You can launch flows and manage their schedules via the Prefect UI at `http://localhost:4200`.
 
 To launch a flow from the command line:
 
 ```bash
-docker compose exec prefect-worker prefect deployment run 'prefecture/deployment-name'
+docker compose exec prefect-worker prefect deployment run 'prefecture/weekly-digest'
 ```
+
+Once the flow completes you will notice the directory `workdir/data` appear - this is where the flow run keeps its data.
 
 ## Local CLI Usage
 
-If you prefer not to use Docker, you can use the CLI directly. First install it:
+If you prefer not to use Docker nor even to bother with the Prefect UI, you can launch the jobs using the CLI directly. First install it:
 
 ```bash
 uv tool install [--editable] .
 ```
 
+Now run:
+
 ```bash
-uv tool run configs/my_digest.yaml
+cd workdir; uv tool run prefecture configs/weekly_digest/config.yaml
 ```
 
 *Note: If developing locally and updating the package, use `uvx --refresh --from /path/to/prefecture prefecture ...` to bypass caching.*

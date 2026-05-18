@@ -1,0 +1,11 @@
+prefect-version: 3.0.0
+deployments:
+  - name: weekly-digest
+    entrypoint: prefecture.flows:run_flow
+    parameters:
+      config_file: "./configs/weekly_digest/config.yaml"
+    schedules:
+      - cron: "0 8 * * Mon"
+        timezone: Europe/Amsterdam
+    work_pool:
+      name: default

@@ -19,6 +19,10 @@ dependencies = [
     "sqlalchemy",
 ]
 
+[project.urls]
+Homepage = "https://github.com/konstantint/prefecture"
+Repository = "https://github.com/konstantint/prefecture"
+
 [project.scripts]
 prefecture = "prefecture.cli:main"
 

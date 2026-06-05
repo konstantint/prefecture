@@ -51,6 +51,7 @@ Each step is defined by its class path (e.g., `python.module.PythonClass`) or a 
 Built-in shorthand mapping:
 *   `jinja2`: `prefecture.templating.Jinja2Templater`
 *   `gemini`: `prefecture.gemini.GeminiGenerator`
+*   `gemini_image`: `prefecture.gemini_image.GeminiImageGenerator`
 *   `mailer`: `prefecture.mailer.GmailMailer`
 *   `ntfy`: `prefecture.ntfy.NtfySender`
 *   `google_chat_reader`: `prefecture.google_chat_reader.GoogleChatReader`
@@ -99,6 +100,8 @@ steps:
       gmail_refresh_token: "$GMAIL_REFRESH_TOKEN"
       recipients: ["consumer@example.com"]
       content_file_name: "digest.md"
+      attachments:
+        - image_file_name: "digest_image.png"
 ```
 
 ### B. Usage via Docker (Recommended)
@@ -142,6 +145,8 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Parses subject from frontmatter.
 *   Encapsulates email template (`email_base.html.j2`).
 *   Uses Gmail API to send email.
+*   Supports an optional `attachments` list of dicts. For now, it supports:
+    *   `image_file_name` (str): Image filename resolved relative to `run_dir` to be attached to the email.
 
 ### D. `ntfy.NtfySender`
 *   Reads content from `run_dir / content_file_name` OR uses explicit `content` string.

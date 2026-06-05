@@ -15,6 +15,7 @@ from prefecture import config
 STEP_MAP = {
     "jinja2": "prefecture.templating.Jinja2Templater",
     "gemini": "prefecture.gemini.GeminiGenerator",
+    "gemini_image": "prefecture.gemini_image.GeminiImageGenerator",
     "ntfy": "prefecture.ntfy.NtfySender",
     "mailer": "prefecture.mailer.GmailMailer",
     "google_chat_reader": "prefecture.google_chat_reader.GoogleChatReader",

@@ -1,8 +1,11 @@
 """Gmail mailer tasks for Prefecture."""
 
 import base64
+from email import encoders
+from email.mime import base
 from email.mime import multipart
 from email.mime import text
+import mimetypes
 import os
 import pathlib
 import re
@@ -31,6 +34,7 @@ class GmailMailer:
         gmail_refresh_token: str,
         recipients: list[str],
         content_file_name: str,
+        attachments: list[dict[str, str]] | None = None,
     ):
         """Initializes the GmailMailer."""
         self.client_id = gmail_client_id
@@ -38,6 +42,7 @@ class GmailMailer:
         self.refresh_token = gmail_refresh_token
         self.recipients = recipients
         self.content_file_name = content_file_name
+        self.attachments = attachments or []
         self.config_dir = config_dir
 
     def get_access_token(self) -> str:
@@ -83,6 +88,25 @@ class GmailMailer:
 
         inlined_html = premailer.transform(rendered_html)
 
+        # Read attachments if specified
+        attachments_to_add = []
+        for att in self.attachments:
+            if "image_file_name" in att:
+                image_name = att["image_file_name"]
+                image_path = run_dir / image_name
+                with open(image_path, "rb") as f:
+                    data = f.read()
+                mime_type, _ = mimetypes.guess_type(image_path)
+                if mime_type is None:
+                    mime_type = "application/octet-stream"
+                main_type, sub_type = mime_type.split("/", 1)
+                attachments_to_add.append({
+                    "data": data,
+                    "name": image_path.name,
+                    "main_type": main_type,
+                    "sub_type": sub_type,
+                })
+
         # Send email
         try:
             access_token = self.get_access_token()
@@ -93,6 +117,17 @@ class GmailMailer:
                 msg["Subject"] = subject
 
                 msg.attach(text.MIMEText(inlined_html, "html"))
+
+                for att in attachments_to_add:
+                    img_part = base.MIMEBase(att["main_type"], att["sub_type"])
+                    img_part.set_payload(att["data"])
+                    encoders.encode_base64(img_part)
+                    img_part.add_header(
+                        "Content-Disposition",
+                        "attachment",
+                        filename=att["name"],
+                    )
+                    msg.attach(img_part)
 
                 raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode(
                     "utf-8"

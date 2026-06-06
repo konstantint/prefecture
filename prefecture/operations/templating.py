@@ -1,6 +1,7 @@
 """Templating utilities for Prefecture."""
 
 import datetime
+import inspect
 import json
 import os
 import pathlib
@@ -26,8 +27,15 @@ def render_template(template_path: pathlib.Path, context: dict) -> str:
 class ContextLoader:
     """Base class for context loaders."""
 
-    def __call__(self, run_dir: pathlib.Path) -> object:
+    def __init__(self, run_dir: pathlib.Path | None = None):
+        self.run_dir = run_dir
+
+    def __call__(self) -> object:
         raise NotImplementedError
+
+    @property
+    def dependencies(self) -> set[str]:
+        return set()
 
 
 _registry = {}
@@ -47,31 +55,36 @@ class RunDirFileLoader(ContextLoader):
         days_ago: int = 0,
         fail_on_error: bool = False,
         load_json: bool = False,
+        run_dir: pathlib.Path | None = None,
     ):
         """Initializes the RunDirFileLoader."""
+        super().__init__(run_dir=run_dir)
         self.file_name = file_name
         self.days_ago = days_ago
         self.fail_on_error = fail_on_error
         self.load_json = load_json
 
-    def __call__(self, run_dir: pathlib.Path) -> object:
+    def __call__(self) -> object:
         """Loads content from file."""
+        if not self.run_dir:
+            raise ValueError("run_dir must be specified")
+
         if self.days_ago == 0:
-            target_path = run_dir / self.file_name
+            target_path = self.run_dir / self.file_name
         else:
             try:
                 current_date = datetime.datetime.strptime(
-                    run_dir.name, "%Y-%m-%d"
+                    self.run_dir.name, "%Y-%m-%d"
                 )
                 prev_date = current_date - datetime.timedelta(
                     days=self.days_ago
                 )
                 prev_date_str = prev_date.strftime("%Y-%m-%d")
-                target_path = run_dir.parent / prev_date_str / self.file_name
+                target_path = self.run_dir.parent / prev_date_str / self.file_name
             except ValueError:
                 if self.fail_on_error:
                     raise ValueError(
-                        f"Could not parse date from run_dir name: {run_dir.name}"
+                        f"Could not parse date from run_dir name: {self.run_dir.name}"
                     )
                 return None
 
@@ -88,16 +101,42 @@ class RunDirFileLoader(ContextLoader):
             return json.loads(content)
         return content
 
+    @property
+    def dependencies(self) -> set[str]:
+        if not self.run_dir:
+            return set()
+        if self.days_ago == 0:
+            target_path = self.run_dir / self.file_name
+        else:
+            try:
+                current_date = datetime.datetime.strptime(
+                    self.run_dir.name, "%Y-%m-%d"
+                )
+                prev_date = current_date - datetime.timedelta(
+                    days=self.days_ago
+                )
+                prev_date_str = prev_date.strftime("%Y-%m-%d")
+                target_path = self.run_dir.parent / prev_date_str / self.file_name
+            except ValueError:
+                return set()
+        return {str(target_path.resolve())}
+
 
 class SqlAlchemyLoader(ContextLoader):
     """Loads data from a database using SQLAlchemy."""
 
-    def __init__(self, db_url: str, query: str):
+    def __init__(
+        self,
+        db_url: str,
+        query: str,
+        run_dir: pathlib.Path | None = None,
+    ):
         """Initializes the SqlAlchemyLoader."""
+        super().__init__(run_dir=run_dir)
         self.db_url = db_url
         self.query = query
 
-    def __call__(self, run_dir: pathlib.Path) -> object:
+    def __call__(self) -> object:
         """Executes the query and returns results as a list of dicts."""
         engine = sqlalchemy.create_engine(self.db_url)
         try:
@@ -107,15 +146,28 @@ class SqlAlchemyLoader(ContextLoader):
         except Exception as e:
             raise ValueError(f"Database query failed: {e}")
 
+    @property
+    def dependencies(self) -> set[str]:
+        deps = {self.db_url}
+        if self.db_url.startswith("sqlite://"):
+            if self.db_url.startswith("sqlite:///"):
+                db_path = self.db_url[len("sqlite:///"):]
+                if db_path and db_path != ":memory:":
+                    path = pathlib.Path(db_path)
+                    if not path.is_absolute():
+                        path = path.resolve()
+                    deps.add(str(path))
+        return deps
+
 
 class DatetimeNowLoader(ContextLoader):
     """Loads the current datetime."""
 
-    def __init__(self):
+    def __init__(self, run_dir: pathlib.Path | None = None):
         """Initializes the DatetimeNowLoader."""
-        pass
+        super().__init__(run_dir=run_dir)
 
-    def __call__(self, run_dir: pathlib.Path) -> object:
+    def __call__(self) -> object:
         """Returns the current local datetime."""
         return datetime.datetime.now()
 
@@ -143,26 +195,35 @@ class Jinja2Templater:
         self.run_dir = run_dir
         self.template_file = template_file
         self.output_file_name = output_file_name
-        self.context_loaders = context_loaders or []
         self.params = params or {}
+
+        self.loaders = []
+        for loader_cfg in (context_loaders or []):
+            loader_type = loader_cfg["type"]
+            assign_to = loader_cfg.get("assign_to", loader_type)
+            if loader_type in _registry:
+                loader_cls = _registry[loader_type]
+                loader_params = loader_cfg.get("params", {})
+                
+                # Use inspect to handle loaders that might not accept run_dir keyword argument
+                sig = inspect.signature(loader_cls)
+                if "run_dir" in sig.parameters:
+                    loader_instance = loader_cls(run_dir=run_dir, **loader_params)
+                else:
+                    loader_instance = loader_cls(**loader_params)
+                self.loaders.append((assign_to, loader_instance))
+            else:
+                print(f"Warning: Unknown context loader type: {loader_type}")
 
     @prefect.task(name="Jinja2Templater")
     def __call__(self) -> str:
         """Runs the Jinja2 templating task."""
         context = {}
 
-        for loader_cfg in self.context_loaders:
-            loader_type = loader_cfg["type"]
-            assign_to = loader_cfg.get("assign_to", loader_type)
+        for assign_to, loader_instance in self.loaders:
+            data = loader_instance()
+            context.update({assign_to: data})
 
-            if loader_type in _registry:
-                loader_cls = _registry[loader_type]
-                loader_params = loader_cfg.get("params", {})
-                loader_instance = loader_cls(**loader_params)
-                data = loader_instance(self.run_dir)
-                context.update({assign_to: data})
-            else:
-                print(f"Warning: Unknown context loader type: {loader_type}")
         context.update(self.params)
         template_path = pathlib.Path(self.template_file)
         if not template_path.is_absolute():
@@ -189,3 +250,23 @@ class Jinja2Templater:
         )
 
         return content
+
+    @property
+    def dependencies(self) -> set[str]:
+        deps = set()
+        template_path = pathlib.Path(self.template_file)
+        if not template_path.is_absolute():
+            template_path = self.config_dir / template_path
+        deps.add(str(template_path.resolve()))
+
+        for _, loader_instance in self.loaders:
+            deps.update(loader_instance.dependencies)
+
+        return deps
+
+    @property
+    def outputs(self) -> set[str]:
+        if self.output_file_name:
+            out_path = self.run_dir / self.output_file_name
+            return {str(out_path.resolve())}
+        return set()

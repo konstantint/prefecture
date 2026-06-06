@@ -151,6 +151,25 @@ class GeminiImageGenerator:
 
         return final_file_path
 
+    @property
+    def dependencies(self) -> set[str]:
+        if getattr(self, "prompt_file_name", None):
+            path = pathlib.Path(self.prompt_file_name)
+            if not path.is_absolute():
+                path = self.run_dir / path
+            return {str(path.resolve())}
+        return set()
+
+    @property
+    def outputs(self) -> set[str]:
+        if getattr(self, "output_file_name", None):
+            path = pathlib.Path(self.output_file_name)
+            if not path.is_absolute():
+                path = self.run_dir / path
+            return {str(path.resolve())}
+        return set()
+
+
 if __name__ == "__main__":
     dotenv.load_dotenv(override=True)
     api_key = os.environ.get("GEMINI_API_KEY")

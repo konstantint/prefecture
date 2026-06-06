@@ -36,6 +36,16 @@ def sequential(
     cfg: Dict[str, Any], run_dir: pathlib.Path, config_dir: pathlib.Path
 ):
     """Executes the steps in the configuration sequentially."""
+    steps = _instantiate_steps(cfg, run_dir, config_dir)
+    for step_instance in steps:
+        step_instance()
+
+
+def _instantiate_steps(
+    cfg: Dict[str, Any], run_dir: pathlib.Path, config_dir: pathlib.Path
+) -> List[Any]:
+    """Instantiates all steps defined in the configuration."""
+    instantiated_steps = []
     for step in cfg.get("steps", []):
         for step_type, step_cfg in step.items():
             class_path = STEP_MAP.get(step_type, step_type)
@@ -47,4 +57,34 @@ def sequential(
             step_instance = step_class(
                 config_dir=config_dir, run_dir=run_dir, **step_cfg
             )
-            step_instance()
+            instantiated_steps.append(step_instance)
+    return instantiated_steps
+
+
+def _build_dependency_graph(instantiated_steps: List[Any]) -> Dict[Any, Any]:
+    """Creates a dependency graph mapping each step object to its dependencies."""
+    deps_graph = {}
+    for i, step in enumerate(instantiated_steps):
+        if hasattr(step, "dependencies"):
+            try:
+                deps = step.dependencies
+            except AttributeError:
+                deps = None
+        else:
+            deps = None
+
+        if deps is not None:
+            deps_graph[step] = deps
+        else:
+            deps_graph[step] = set(instantiated_steps[:i])
+
+    return deps_graph
+
+
+def graph(
+    cfg: Dict[str, Any], run_dir: pathlib.Path, config_dir: pathlib.Path
+) -> Dict[Any, Any]:
+    """Instantiates all steps and returns the dependency graph."""
+    steps = _instantiate_steps(cfg, run_dir, config_dir)
+    return _build_dependency_graph(steps)
+

@@ -150,4 +150,25 @@ class GmailMailer:
             print(f"Error sending email: {e}")
             raise
 
+    @property
+    def dependencies(self) -> set[str]:
+        deps = set()
+        if getattr(self, "content_file_name", None):
+            path = pathlib.Path(self.content_file_name)
+            if not path.is_absolute():
+                path = self.run_dir / path
+            deps.add(str(path.resolve()))
+        for att in getattr(self, "attachments", []):
+            if "image_file_name" in att:
+                path = pathlib.Path(att["image_file_name"])
+                if not path.is_absolute():
+                    path = self.run_dir / path
+                deps.add(str(path.resolve()))
+        return deps
+
+    @property
+    def outputs(self) -> set[str]:
+        return set()
+
+
 

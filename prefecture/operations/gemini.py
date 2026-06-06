@@ -77,4 +77,23 @@ class GeminiGenerator:
 
         return full_text
 
+    @property
+    def dependencies(self) -> set[str]:
+        if getattr(self, "prompt_file_name", None):
+            path = pathlib.Path(self.prompt_file_name)
+            if not path.is_absolute():
+                path = self.run_dir / path
+            return {str(path.resolve())}
+        return set()
+
+    @property
+    def outputs(self) -> set[str]:
+        if getattr(self, "output_file_name", None):
+            path = pathlib.Path(self.output_file_name)
+            if not path.is_absolute():
+                path = self.run_dir / path
+            return {str(path.resolve())}
+        return set()
+
+
 

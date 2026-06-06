@@ -39,3 +39,18 @@ class CopyFile:
 
         print(f"Copying {src} to {dst}")
         shutil.copy(src, dst)
+
+    @property
+    def dependencies(self) -> set[str]:
+        path = pathlib.Path(self.from_path)
+        if not path.is_absolute():
+            path = self.run_dir / path
+        return {str(path.resolve())}
+
+    @property
+    def outputs(self) -> set[str]:
+        path = pathlib.Path(self.to_path)
+        if not path.is_absolute():
+            path = self.run_dir / path
+        return {str(path.resolve())}
+

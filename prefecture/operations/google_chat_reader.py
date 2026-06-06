@@ -4,6 +4,7 @@ import argparse
 import datetime
 import json
 import os
+import pathlib
 import typing
 
 import dotenv
@@ -185,6 +186,30 @@ class GoogleChatReader:
         with open(data_file, 'w') as f:
             json.dump(all_messages, f, indent=2)
         print(f"Saved {len(all_messages)} simplified messages to {data_file}")
+
+    @property
+    def outputs(self) -> set[str]:
+        run_path = pathlib.Path(self.run_dir)
+        chat_dir = run_path / "chat"
+        raw_dir = chat_dir / "raw"
+        
+        result = set()
+        for space in getattr(self, "spaces", []):
+            display_name = space.get('display_name')
+            if display_name:
+                slug = slugify.slugify(display_name)
+                space_file = raw_dir / f"{slug}.json"
+                result.add(str(space_file.resolve()))
+                
+        data_file = chat_dir / "data.json"
+        result.add(str(data_file.resolve()))
+        return result
+
+    @property
+    def dependencies(self) -> set[str]:
+        return set()
+
+
 
 def main():
     """Main function to run the Google Chat reader."""

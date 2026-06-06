@@ -198,11 +198,7 @@ class GeminiTtsGenerator:
 
         out_path = self.run_dir / self.output_file_name
 
-        # We ensure the file has a .wav extension by default if no extension is specified
-        if out_path.suffix == "":
-            final_file_path = out_path.with_suffix(".wav")
-        else:
-            final_file_path = out_path
+        final_file_path = out_path
 
         wav_writer = None
         is_raw_pcm = False

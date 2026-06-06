@@ -170,7 +170,7 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Reads prompt from `run_dir / prompt_file_name` OR uses explicit `prompt` string.
 *   Uses `google-genai` SDK.
 *   Supports optional `aspect_ratio` configuration.
-*   Writes output to `run_dir / output_file_name` (determines/guesses format and suffix dynamically if not provided).
+*   Writes output to `run_dir / output_file_name`.
 *   Publishes a Prefect image artifact of the generated image.
 
 ### D. `operations.gemini_tts.GeminiTtsGenerator`
@@ -179,7 +179,7 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Supports configurable voice via `voice` parameter.
 *   Supports request `timeout` (defaulting to 300s).
 *   Streams chunks to `run_dir / output_file_name` and formats as standard `.wav` if raw PCM is returned.
-*   Publishes a Prefect link artifact referencing the generated `.wav` file.
+*   Publishes a Prefect link artifact referencing the generated audio file.
 
 ### E. `operations.mailer.GmailMailer`
 *   Reads content from `run_dir / content_file_name`.

@@ -1,7 +1,7 @@
 # Specification: `prefecture/operations/google_chat_reader.py`
 
 ## 1. Overview
-The `GoogleChatReader` component is responsible for fetching recent messages from specified Google Chat spaces and storing the raw responses as well as a single combined file. It uses the Google Chat API with OAuth 2.0 authentication.
+The `GoogleChatReader` component is responsible for fetching recent messages from specified Google Chat spaces and storing the complete, depaginated list of raw message objects as well as a single combined file. It uses the Google Chat API with OAuth 2.0 authentication.
 
 ## 2. Configuration
 The component is parameterized in the YAML config under `google_chat_reader`:
@@ -26,7 +26,7 @@ google_chat_reader:
 For each space listed in the configuration:
 1.  Fetch messages up to `max_messages` or limited by `max_hours_ago`.
     *   **Retry Logic:** If a request to fetch messages fails with a transient error (HTTP status 429, 503, or error message containing `THROTTLED_TASK_LIMIT`), the reader will automatically retry the request up to `num_retries` times using exponential backoff with jitter.
-2.  Save the raw JSON response from the API to `<run_dir>/chat/raw/<space-name-slug>.json`.
+2.  Save the clean, full depaginated set of messages as a JSON array to `<run_dir>/chat/raw/<space-name-slug>.json`.
     *   `<space-name-slug>` is generated from `display_name` using `python-slugify`.
 
 After processing all spaces:
@@ -59,7 +59,7 @@ To test the component, run it with the following parameters:
 - No age limit.
 
 Verify that:
-- `<run_dir>/chat/raw/knock.json` is created and contains raw messages.
+- `<run_dir>/chat/raw/knock.json` is created and contains a JSON array of the depaginated raw messages.
 - `<run_dir>/chat/data.json` is created and contains the messages with the space/displayName value.
 
 ## 6. Enabling API and Credentials

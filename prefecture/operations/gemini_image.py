@@ -122,12 +122,8 @@ class GeminiImageGenerator:
             if chunk.parts[0].inline_data and chunk.parts[0].inline_data.data:
                 inline_data = chunk.parts[0].inline_data
                 data_buffer = inline_data.data
-                file_extension = mimetypes.guess_extension(inline_data.mime_type)
                 
-                if out_path.suffix == "":
-                    final_file_path = out_path.with_suffix(file_extension or ".png")
-                else:
-                    final_file_path = out_path
+                final_file_path = out_path
 
                 with open(final_file_path, "wb") as f:
                     f.write(data_buffer)

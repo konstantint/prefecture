@@ -21,8 +21,8 @@ It accepts the following parameters in `__init__`:
 When called:
 1.  It iterates over `context_loaders`.
 2.  For each loader, it looks up the registered class in the registry.
-3.  It instantiates the class with `params` provided in the configuration.
-4.  It calls the loader instance with the stored `run_dir`.
+3.  It instantiates the class with `params` provided in the configuration, optionally passing `run_dir` if the constructor signature supports it.
+4.  It calls the loader instance with no arguments.
 5.  The output is added to the template context under the `assign_to` key.
 6.  It merges static `params` into the context.
 7.  It renders the template.
@@ -35,7 +35,10 @@ Context loaders are classes that implement the `ContextLoader` protocol.
 ### Protocol
 ```python
 class ContextLoader:
-    def __call__(self, run_dir: Path) -> str:
+    def __init__(self, run_dir: Path | None = None):
+        pass
+
+    def __call__(self) -> object:
         raise NotImplementedError
 ```
 

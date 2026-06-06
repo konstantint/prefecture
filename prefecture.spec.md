@@ -109,7 +109,28 @@ steps:
         - image_file_name: "digest_image.png"
 ```
 
-### B. Usage via Docker (Recommended)
+### B. Configuration Loading and Step Inclusion (`!include`)
+
+The configuration loader supports recursive inclusion of other YAML config files inside the `steps` list using the `!include` tag.
+
+The format is:
+```yaml
+steps:
+  - !include:
+      file_name: <name of file in the config dir>
+      substitutions:
+        key: value
+        key: value
+```
+
+When an `!include` step is encountered:
+1. If `substitutions` is specified and not empty, the included file is loaded as raw text and rendered using Jinja2 with the substitutions passed as context. If there are no substitutions, the file is loaded directly.
+2. The content is then parsed as a YAML file.
+3. If the parsed content is a dictionary (a single step), it replaces the `!include` step in-place. If it is a list of steps, they are spliced into the list of steps at that position.
+4. This resolution is performed recursively up to 100 iterations. If any `!include` steps remain after 100 iterations, a `ValueError` (include recursion exceeded) is raised.
+5. After resolving all inclusions, environment variables (e.g. `$VAR` or `${VAR}`) are expanded throughout the final configuration structure.
+
+### C. Usage via Docker (Recommended)
 
 The intended usage is to run `prefecture` with its dependencies using Docker as described in `README.md`.
 1. **Start Infrastructure**: `docker compose up -d --build` starts Prefect server and worker.

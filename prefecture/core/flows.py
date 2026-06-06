@@ -40,7 +40,7 @@ def run_flow(config_file: str):
     config_dir = pathlib.Path(config_file).resolve().parent
 
     with execution.pythonpath_prepended(cfg.get("prepend_to_pythonpath", [])):
-        execution.sequential(cfg, run_dir, config_dir)
+        execution.graph(cfg, run_dir, config_dir)
 
 
 

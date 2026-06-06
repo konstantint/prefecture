@@ -112,9 +112,13 @@ def test_build_dependency_graph_fallback():
     steps = [step1, step2, step3, step4]
     graph = execution._build_dependency_graph(steps)
 
+    # step1 fallback: empty
     assert graph[step1] == set()
+    # step2 fallback: {step1}
     assert graph[step2] == {step1}
-    assert graph[step3] == {"/file1"}
+    # step3 has dependencies {"/file1"}, but no step produces it -> resolves to empty step deps
+    assert graph[step3] == set()
+    # step4 fallback: {step1, step2, step3}
     assert graph[step4] == {step1, step2, step3}
 
 
@@ -212,42 +216,124 @@ def test_build_dependency_graph_all_ops(tmp_path):
     ]
     graph = execution._build_dependency_graph(steps)
 
-    # 1. chat_reader (dependencies = empty set)
+    # 1. chat_reader (dependencies = empty set, outputs: chat files)
     assert graph[chat_reader] == set()
     assert chat_reader.outputs == {
         str((run_dir / "chat" / "raw" / "space-one.json").resolve()),
         str((run_dir / "chat" / "data.json").resolve()),
     }
 
-    # 2. copyfile (dependencies = {from_path})
-    assert graph[copyfile] == {str((run_dir / "input.txt").resolve())}
+    # 2. copyfile (dependencies = {input.txt} -> unresolved -> empty step deps)
+    assert graph[copyfile] == set()
     assert copyfile.outputs == {str((run_dir / "output.txt").resolve())}
 
-    # 3. templater (dependencies = union of template_file, context loaders)
-    assert graph[templater] == {
-        str((config_dir / "template.j2").resolve()),
-        str((run_dir / "input.txt").resolve()),
-        str(pathlib.Path("test.db").resolve()),
-        "sqlite:///test.db",
-    }
+    # 3. templater (dependencies: template.j2, input.txt, test.db -> all unresolved -> empty step deps)
+    assert graph[templater] == set()
     assert templater.outputs == {str((run_dir / "prompt.txt").resolve())}
 
-    # 4. gemini
-    assert graph[gemini] == {str((run_dir / "prompt.txt").resolve())}
+    # 4. gemini (dependencies: prompt.txt -> produced by templater)
+    assert graph[gemini] == {templater}
     assert gemini.outputs == {str((run_dir / "digest.md").resolve())}
 
-    # 5. gemini_image
-    assert graph[gemini_image] == {str((run_dir / "prompt.txt").resolve())}
+    # 5. gemini_image (dependencies: prompt.txt -> produced by templater)
+    assert graph[gemini_image] == {templater}
     assert gemini_image.outputs == {str((run_dir / "image.png").resolve())}
 
-    # 6. mailer
-    assert graph[mailer] == {
-        str((run_dir / "digest.md").resolve()),
-        str((run_dir / "image.png").resolve()),
-    }
+    # 6. mailer (dependencies: digest.md -> gemini, image.png -> gemini_image)
+    assert graph[mailer] == {gemini, gemini_image}
     assert mailer.outputs == set()
 
-    # 7. ntfy
-    assert graph[ntfy] == {str((run_dir / "digest.md").resolve())}
+    # 7. ntfy (dependencies: digest.md -> gemini)
+    assert graph[ntfy] == {gemini}
     assert ntfy.outputs == set()
+
+
+def test_has_loop():
+    class DummyStep:
+        pass
+
+    s1 = DummyStep()
+    s2 = DummyStep()
+    s3 = DummyStep()
+
+    # Loop s1 -> s2 -> s3 -> s1
+    graph_cycle = {s1: {s2}, s2: {s3}, s3: {s1}}
+    assert execution._has_loop(graph_cycle) is True
+
+    # DAG s1 -> s2 -> s3
+    graph_dag = {s1: set(), s2: {s1}, s3: {s2}}
+    assert execution._has_loop(graph_dag) is False
+
+
+def test_graph_executes_in_topological_order_and_detects_loops(tmp_path):
+    run_dir = tmp_path / "run"
+    config_dir = tmp_path / "config"
+    run_dir.mkdir()
+    config_dir.mkdir()
+
+    execution_order = []
+
+    class DummyStep:
+
+        def __init__(self, name, dependencies=None, outputs=None):
+            self.name = name
+            self._dependencies = dependencies or set()
+            self._outputs = outputs or set()
+
+        def __call__(self):
+            import time
+
+            time.sleep(0.05)
+            execution_order.append(self.name)
+
+        @property
+        def dependencies(self):
+            return self._dependencies
+
+        @property
+        def outputs(self):
+            return self._outputs
+
+    # Create step objects
+    s1 = DummyStep("s1", outputs={"/fileA"})
+    s2 = DummyStep("s2", dependencies={"/fileA"})
+    s3 = DummyStep("s3", outputs={"/fileB"})
+    s4 = DummyStep("s4", dependencies={"/fileA", "/fileB"})
+
+    with mock.patch(
+        "prefecture.core.execution._instantiate_steps"
+    ) as mock_instantiate:
+        mock_instantiate.return_value = [s1, s2, s3, s4]
+
+        execution.graph({}, run_dir, config_dir)
+
+        # Verify s1 executed before s2 and s4, s3 executed before s4
+        assert execution_order.index("s1") < execution_order.index("s2")
+        assert execution_order.index("s1") < execution_order.index("s4")
+        assert execution_order.index("s3") < execution_order.index("s4")
+
+    # Check loop detection
+    s1_cycle = DummyStep("s1", dependencies={"/fileB"}, outputs={"/fileA"})
+    s2_cycle = DummyStep("s2", dependencies={"/fileA"}, outputs={"/fileB"})
+
+    with mock.patch(
+        "prefecture.core.execution._instantiate_steps"
+    ) as mock_instantiate:
+        mock_instantiate.return_value = [s1_cycle, s2_cycle]
+        with pytest.raises(ValueError) as exc_info:
+            execution.graph({}, run_dir, config_dir)
+        assert "contains a loop" in str(exc_info.value)
+
+    # Check duplicate outputs detection
+    s1_dup = DummyStep("s1", outputs={"/fileA"})
+    s2_dup = DummyStep("s2", outputs={"/fileA"})
+
+    with mock.patch(
+        "prefecture.core.execution._instantiate_steps"
+    ) as mock_instantiate:
+        mock_instantiate.return_value = [s1_dup, s2_dup]
+        with pytest.raises(ValueError) as exc_info:
+            execution.graph({}, run_dir, config_dir)
+        assert "produced by multiple steps" in str(exc_info.value)
+
 

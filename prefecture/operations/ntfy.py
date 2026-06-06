@@ -88,14 +88,16 @@ class NtfySender:
         except Exception as e:
             print(f"Error sending notification: {e}")
 
-    @property
-    def dependencies(self) -> set[str]:
-        if getattr(self, "content_file_name", None):
-            path = pathlib.Path(self.content_file_name)
-            if not path.is_absolute():
-                path = self.run_dir / path
-            return {str(path.resolve())}
-        return set()
+    # We don't define any dependencies.
+    # This means the step will always wait for all preceding steps to complete.
+    # @property
+    # def dependencies(self) -> set[str]:
+    #     if getattr(self, "content_file_name", None):
+    #         path = pathlib.Path(self.content_file_name)
+    #         if not path.is_absolute():
+    #             path = self.run_dir / path
+    #         return {str(path.resolve())}
+    #     return set()
 
     @property
     def outputs(self) -> set[str]:

@@ -11,6 +11,7 @@ STEP_MAP = {
     "jinja2": "prefecture.operations.templating.Jinja2Templater",
     "gemini": "prefecture.operations.gemini.GeminiGenerator",
     "gemini_image": "prefecture.operations.gemini_image.GeminiImageGenerator",
+    "gemini_tts": "prefecture.operations.gemini_tts.GeminiTtsGenerator",
     "ntfy": "prefecture.operations.ntfy.NtfySender",
     "mailer": "prefecture.operations.mailer.GmailMailer",
     "google_chat_reader": "prefecture.operations.google_chat_reader.GoogleChatReader",

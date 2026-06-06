@@ -131,6 +131,7 @@ def test_build_dependency_graph_all_ops(tmp_path):
     from prefecture.operations.copyfile import CopyFile
     from prefecture.operations.gemini import GeminiGenerator
     from prefecture.operations.gemini_image import GeminiImageGenerator
+    from prefecture.operations.gemini_tts import GeminiTtsGenerator
     from prefecture.operations.google_chat_reader import GoogleChatReader
     from prefecture.operations.mailer import GmailMailer
     from prefecture.operations.ntfy import NtfySender
@@ -187,6 +188,15 @@ def test_build_dependency_graph_all_ops(tmp_path):
         output_file_name="image.png",
     )
 
+    gemini_tts = GeminiTtsGenerator(
+        config_dir=config_dir,
+        run_dir=run_dir,
+        api_key="dummy_key",
+        prompt_file_name="prompt.txt",
+        output_file_name="audio.wav",
+        voice="Algieba",
+    )
+
     mailer = GmailMailer(
         config_dir=config_dir,
         run_dir=run_dir,
@@ -211,6 +221,7 @@ def test_build_dependency_graph_all_ops(tmp_path):
         templater,
         gemini,
         gemini_image,
+        gemini_tts,
         mailer,
         ntfy,
     ]
@@ -239,12 +250,24 @@ def test_build_dependency_graph_all_ops(tmp_path):
     assert graph[gemini_image] == {templater}
     assert gemini_image.outputs == {str((run_dir / "image.png").resolve())}
 
-    # 6. mailer (dependencies: digest.md -> gemini, image.png -> gemini_image)
+    # 6. gemini_tts (dependencies: prompt.txt -> produced by templater)
+    assert graph[gemini_tts] == {templater}
+    assert gemini_tts.outputs == {str((run_dir / "audio.wav").resolve())}
+
+    # 7. mailer (dependencies: digest.md -> gemini, image.png -> gemini_image)
     assert graph[mailer] == {gemini, gemini_image}
     assert mailer.outputs == set()
 
-    # 7. ntfy (dependencies: digest.md -> gemini)
-    assert graph[ntfy] == {gemini}
+    # 8. ntfy (dependencies = None -> depends on all preceding steps)
+    assert graph[ntfy] == {
+        chat_reader,
+        copyfile,
+        templater,
+        gemini,
+        gemini_image,
+        gemini_tts,
+        mailer,
+    }
     assert ntfy.outputs == set()
 
 

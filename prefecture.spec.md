@@ -118,7 +118,7 @@ The intended usage is to run `prefecture` with its dependencies using Docker as 
 
 ## 5. Core Components (Object-Oriented Tasks)
 
-All components are classes with a `__call__` method decorated with `@task`. They accept `config_dir` in `__init__` and `run_dir` in `__call__`.
+All components are classes with a `__call__` method decorated with `@task`. They accept `config_dir` and `run_dir` in `__init__` (as keyword-only arguments), and take no arguments in `__call__`.
 
 ### A. `operations.templating.Jinja2Templater`
 *   Loads template (resolved relative to config file).
@@ -172,7 +172,7 @@ All components are classes with a `__call__` method decorated with `@task`. They
 2.  Creates `run_dir` as `data/<name>/<YYYY-MM-DD>` (relative to CWD).
 3.  Sets flow run name to `<name>-YYYYMMDD-HHMMSS`.
 4.  Iterates over `steps` in order.
-5.  Instantiates the component for each step and calls it with `run_dir`.
+5.  Instantiates the component for each step (passing `config_dir` and `run_dir`) and calls it.
 
 ## 7. CLI Usage
 

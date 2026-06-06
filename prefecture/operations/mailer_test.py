@@ -23,6 +23,7 @@ This is a paragraph
 
     mailer = GmailMailer(
         config_dir=tmp_path,
+        run_dir=tmp_path,
         gmail_client_id="mock_id",
         gmail_client_secret="mock_secret",
         gmail_refresh_token="mock_token",
@@ -44,7 +45,7 @@ This is a paragraph
         mock_post.side_effect = [mock_token_resp, mock_send_resp]
 
         # Call the mailer task
-        mailer(run_dir=tmp_path)
+        mailer()
 
         # Verify requests were made
         assert mock_post.call_count == 2
@@ -101,6 +102,7 @@ This is a paragraph with image attachments.
 
     mailer = GmailMailer(
         config_dir=tmp_path,
+        run_dir=tmp_path,
         gmail_client_id="mock_id",
         gmail_client_secret="mock_secret",
         gmail_refresh_token="mock_token",
@@ -125,7 +127,7 @@ This is a paragraph with image attachments.
         mock_post.side_effect = [mock_token_resp, mock_send_resp]
 
         # Call the mailer task
-        mailer(run_dir=tmp_path)
+        mailer()
 
         assert mock_post.call_count == 2
 

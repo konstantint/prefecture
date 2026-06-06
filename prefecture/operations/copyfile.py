@@ -13,24 +13,26 @@ class CopyFile:
         self,
         *,
         config_dir: pathlib.Path,
+        run_dir: pathlib.Path,
         from_path: str,
         to_path: str,
     ):
         """Initializes the CopyFile task."""
         self.config_dir = config_dir
+        self.run_dir = run_dir
         self.from_path = from_path
         self.to_path = to_path
 
     @prefect.task(name="CopyFile")
-    def __call__(self, run_dir: pathlib.Path) -> None:
+    def __call__(self) -> None:
         """Copies the file."""
         src = pathlib.Path(self.from_path)
         if not src.is_absolute():
-            src = run_dir / src
+            src = self.run_dir / src
 
         dst = pathlib.Path(self.to_path)
         if not dst.is_absolute():
-            dst = run_dir / dst
+            dst = self.run_dir / dst
 
         # Ensure destination directory exists
         dst.parent.mkdir(parents=True, exist_ok=True)

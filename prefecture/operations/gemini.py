@@ -19,6 +19,7 @@ class GeminiGenerator:
         self,
         *,
         config_dir: pathlib.Path,
+        run_dir: pathlib.Path,
         api_key: str,
         model: str = "gemini-3.1-flash-lite",
         prompt_file_name: str,
@@ -34,13 +35,14 @@ class GeminiGenerator:
         self.output_file_name = output_file_name
         self.use_google_search = use_google_search
         self.config_dir = config_dir
+        self.run_dir = run_dir
 
     # cache_policy NO_CACHE because otherwise we get
     #   JSON error: Unable to serialize unknown type: <class 'prefecture.operations.gemini.GeminiGenerator'>
     @prefect.task(name="GeminiGenerator", cache_policy=cache_policies.NO_CACHE)
-    def __call__(self, run_dir: pathlib.Path) -> str:
+    def __call__(self) -> str:
         """Runs the Gemini generation task."""
-        prompt_path = run_dir / self.prompt_file_name
+        prompt_path = self.run_dir / self.prompt_file_name
         with open(prompt_path, "r") as f:
             prompt_text = f.read()
         system_instruction = ""
@@ -65,7 +67,7 @@ class GeminiGenerator:
             if chunk.text:
                 full_text += chunk.text
 
-        out_path = run_dir / self.output_file_name
+        out_path = self.run_dir / self.output_file_name
         with open(out_path, "w") as f:
             f.write(full_text)
 

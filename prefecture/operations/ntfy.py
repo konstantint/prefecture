@@ -18,6 +18,7 @@ class NtfySender:
         self,
         *,
         config_dir: pathlib.Path,
+        run_dir: pathlib.Path,
         host: str = "https://ntfy.sh",
         user: str | None = None,
         password: str | None = None,
@@ -46,6 +47,7 @@ class NtfySender:
         self.title = title
         self.tags = tags
         self.config_dir = config_dir
+        self.run_dir = run_dir
 
         # Ensure scheme is present
         if not self.host.startswith("http://") and not self.host.startswith(
@@ -58,12 +60,12 @@ class NtfySender:
             self.host = self.host[:-1]
 
     @prefect.task(name="NtfySender")
-    def __call__(self, run_dir: pathlib.Path) -> None:
+    def __call__(self) -> None:
         """Sends notification."""
         if self.content is not None:
             markdown_content = self.content
         else:
-            content_path = run_dir / self.content_file_name
+            content_path = self.run_dir / self.content_file_name
             with open(content_path, "r") as f:
                 markdown_content = f.read()
         url = f"{self.host}/{self.topic}"

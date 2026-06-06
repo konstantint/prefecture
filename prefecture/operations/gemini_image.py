@@ -25,6 +25,7 @@ class GeminiImageGenerator:
         self,
         *,
         config_dir: pathlib.Path,
+        run_dir: pathlib.Path,
         api_key: str,
         model: str = "gemini-3.1-flash-image",
         prompt: str = None,
@@ -36,6 +37,7 @@ class GeminiImageGenerator:
 
         Args:
             config_dir: The directory where configuration files are located.
+            run_dir: The directory where execution artifacts are written.
             api_key: Gemini API key.
             model: Gemini model to use for image generation.
             prompt: Inline prompt text. Alternative to prompt_file_name.
@@ -62,14 +64,15 @@ class GeminiImageGenerator:
         self.output_file_name = output_file_name
         self.aspect_ratio = aspect_ratio
         self.config_dir = config_dir
+        self.run_dir = run_dir
 
     @prefect.task(name="GeminiImageGenerator", cache_policy=cache_policies.NO_CACHE)
-    def __call__(self, run_dir: pathlib.Path) -> pathlib.Path:
+    def __call__(self) -> pathlib.Path:
         """Runs the Gemini image generation task."""
         if self.prompt:
             prompt_text = self.prompt
         elif self.prompt_file_name:
-            prompt_path = run_dir / self.prompt_file_name
+            prompt_path = self.run_dir / self.prompt_file_name
             with open(prompt_path, "r") as f:
                 prompt_text = f.read()
         else:
@@ -100,6 +103,9 @@ class GeminiImageGenerator:
                 "TEXT",
             ],
         )
+
+        # Using a dummy run_dir
+        run_dir = self.run_dir
 
         response_stream = self.client.models.generate_content_stream(
             model=self.model,
@@ -152,14 +158,15 @@ if __name__ == "__main__":
         print("GEMINI_API_KEY environment variable not set.")
         sys.exit(1)
         
+    # Using a dummy run_dir
+    run_dir = pathlib.Path(".")
     generator = GeminiImageGenerator(
         config_dir=pathlib.Path("."),
+        run_dir=run_dir,
         api_key=api_key,
         prompt="Generate an image depicting true, absolute, impeccable beauty",
         aspect_ratio="16:9",
         output_file_name="impeccable_beauty.png"
     )
     
-    # Using a dummy run_dir
-    run_dir = pathlib.Path(".")
-    generator(run_dir=run_dir)
+    generator()

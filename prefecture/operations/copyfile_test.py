@@ -20,10 +20,11 @@ def test_copy_file_relative_paths(tmp_path):
 
     task = copyfile.CopyFile(
         config_dir=config_dir,
+        run_dir=run_dir,
         from_path="source.txt",
         to_path="dest.txt",
     )
-    task(run_dir=run_dir)
+    task()
 
     dest_file = run_dir / "dest.txt"
     assert dest_file.exists()
@@ -49,10 +50,11 @@ def test_copy_file_absolute_paths(tmp_path):
 
     task = copyfile.CopyFile(
         config_dir=config_dir,
+        run_dir=run_dir,
         from_path=str(src_file),
         to_path=str(dest_file),
     )
-    task(run_dir=run_dir)
+    task()
 
     assert dest_file.exists()
     with open(dest_file, "r") as f:
@@ -78,10 +80,11 @@ def test_copy_file_mixed_paths(tmp_path):
 
     task = copyfile.CopyFile(
         config_dir=config_dir,
+        run_dir=run_dir,
         from_path="source.txt",
         to_path=str(dest_file),
     )
-    task(run_dir=run_dir)
+    task()
 
     assert dest_file.exists()
     with open(dest_file, "r") as f:
@@ -102,10 +105,11 @@ def test_copy_file_creates_dest_directory(tmp_path):
     # Dest file in nested relative directory
     task = copyfile.CopyFile(
         config_dir=config_dir,
+        run_dir=run_dir,
         from_path="source.txt",
         to_path="nested/dir/dest.txt",
     )
-    task(run_dir=run_dir)
+    task()
 
     dest_file = run_dir / "nested" / "dir" / "dest.txt"
     assert dest_file.exists()

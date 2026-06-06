@@ -11,17 +11,18 @@ Template rendering is handled by the `Jinja2Templater` class inside `prefecture/
 ### Configuration
 It accepts the following parameters in `__init__`:
 - `config_dir`: Path to the directory containing the configuration file. Used to resolve relative template paths.
+- `run_dir`: Path to the directory where execution artifacts are written.
 - `template_file`: Path to the Jinja2 template file.
 - `output_file_name`: Optional. If provided, the rendered template will be written to this file in the `run_dir`.
 - `context_loaders`: List of context loader configurations.
 - `params`: Static parameters to pass to the template.
 
 ### Execution
-When called with `run_dir`:
+When called:
 1.  It iterates over `context_loaders`.
 2.  For each loader, it looks up the registered class in the registry.
 3.  It instantiates the class with `params` provided in the configuration.
-4.  It calls the instance with `run_dir`.
+4.  It calls the loader instance with the stored `run_dir`.
 5.  The output is added to the template context under the `assign_to` key.
 6.  It merges static `params` into the context.
 7.  It renders the template.

@@ -29,6 +29,7 @@ class GmailMailer:
         self,
         *,
         config_dir: pathlib.Path,
+        run_dir: pathlib.Path,
         gmail_client_id: str,
         gmail_client_secret: str,
         gmail_refresh_token: str,
@@ -44,6 +45,7 @@ class GmailMailer:
         self.content_file_name = content_file_name
         self.attachments = attachments or []
         self.config_dir = config_dir
+        self.run_dir = run_dir
 
     def get_access_token(self) -> str:
         """Gets OAuth2 access token for Gmail."""
@@ -60,9 +62,9 @@ class GmailMailer:
         return response.json()["access_token"]
 
     @prefect.task(name="GmailMailer")
-    def __call__(self, run_dir: pathlib.Path):
+    def __call__(self):
         """Sends email with content from specified file."""
-        content_path = run_dir / self.content_file_name
+        content_path = self.run_dir / self.content_file_name
         with open(content_path, "r") as f:
             md_content = f.read()
         # Parse frontmatter
@@ -93,7 +95,7 @@ class GmailMailer:
         for att in self.attachments:
             if "image_file_name" in att:
                 image_name = att["image_file_name"]
-                image_path = run_dir / image_name
+                image_path = self.run_dir / image_name
                 with open(image_path, "rb") as f:
                     data = f.read()
                 mime_type, _ = mimetypes.guess_type(image_path)

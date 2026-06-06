@@ -1,26 +1,13 @@
 """Flows for the Prefecture system."""
 
 import datetime
-import importlib
 import pathlib
-import sys
-
-
 
 import prefect
 from prefect import runtime
 
 from prefecture.core import config
-
-STEP_MAP = {
-    "jinja2": "prefecture.operations.templating.Jinja2Templater",
-    "gemini": "prefecture.operations.gemini.GeminiGenerator",
-    "gemini_image": "prefecture.operations.gemini_image.GeminiImageGenerator",
-    "ntfy": "prefecture.operations.ntfy.NtfySender",
-    "mailer": "prefecture.operations.mailer.GmailMailer",
-    "google_chat_reader": "prefecture.operations.google_chat_reader.GoogleChatReader",
-    "copyfile": "prefecture.operations.copyfile.CopyFile",
-}
+from prefecture.core import execution
 
 
 def generate_run_name(**kwargs) -> str:
@@ -52,22 +39,8 @@ def run_flow(config_file: str):
 
     config_dir = pathlib.Path(config_file).resolve().parent
 
-    for p in reversed(cfg.get("prepend_to_pythonpath", [])):
-        abs_path = str(pathlib.Path(p).resolve())
-        if abs_path in sys.path:
-            sys.path.remove(abs_path)
-        sys.path.insert(0, abs_path)
+    with execution.pythonpath_prepended(cfg.get("prepend_to_pythonpath", [])):
+        execution.sequential(cfg, run_dir, config_dir)
 
-    for step in cfg.get("steps", []):
-
-        for step_type, step_cfg in step.items():
-            class_path = STEP_MAP.get(step_type, step_type)
-            module_path, class_name = class_path.rsplit(".", 1)
-            module = importlib.import_module(module_path)
-            step_class = getattr(module, class_name)
-
-            step_cfg = step_cfg or {}
-            step_instance = step_class(config_dir=config_dir, **step_cfg)
-            step_instance(run_dir=run_dir)
 
 

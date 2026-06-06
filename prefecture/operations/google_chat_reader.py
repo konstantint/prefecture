@@ -22,6 +22,7 @@ class GoogleChatReader:
     def __init__(
         self,
         config_dir: str,
+        run_dir: str,
         client_id: str,
         client_secret: str,
         refresh_token: str,
@@ -33,6 +34,7 @@ class GoogleChatReader:
     ):
         """Initializes the GoogleChatReader."""
         self.config_dir = config_dir
+        self.run_dir = run_dir
         self.client_id = os.path.expandvars(client_id)
         self.client_secret = os.path.expandvars(client_secret)
         self.refresh_token = os.path.expandvars(refresh_token)
@@ -94,9 +96,9 @@ class GoogleChatReader:
                     raise
 
     @prefect.task(name="GoogleChatReader")
-    def __call__(self, run_dir: str) -> None:
+    def __call__(self) -> None:
         """Reads messages from Google Chat and saves them."""
-        print(f"Starting Google Chat reader in {run_dir}")
+        print(f"Starting Google Chat reader in {self.run_dir}")
 
         if (
             not self.client_id
@@ -111,7 +113,7 @@ class GoogleChatReader:
         creds = self._get_credentials()
         service = discovery.build("chat", "v1", credentials=creds)
 
-        raw_dir = os.path.join(run_dir, "chat", "raw")
+        raw_dir = os.path.join(self.run_dir, "chat", "raw")
         os.makedirs(raw_dir, exist_ok=True)
 
         all_messages = []
@@ -179,7 +181,7 @@ class GoogleChatReader:
                 all_messages.append(msg)
 
         # Save union data
-        data_file = os.path.join(run_dir, 'chat', 'data.json')
+        data_file = os.path.join(self.run_dir, 'chat', 'data.json')
         with open(data_file, 'w') as f:
             json.dump(all_messages, f, indent=2)
         print(f"Saved {len(all_messages)} simplified messages to {data_file}")
@@ -209,10 +211,12 @@ def main():
     reader_config = cfg.get("google_chat_reader", {})
 
     reader = GoogleChatReader(
-        config_dir=os.path.dirname(args.config), **reader_config
+        config_dir=os.path.dirname(args.config),
+        run_dir=args.run_dir,
+        **reader_config
     )
 
-    reader(run_dir=args.run_dir)
+    reader()
 
 if __name__ == "__main__":
     main()

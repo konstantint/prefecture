@@ -132,6 +132,7 @@ class Jinja2Templater:
         self,
         *,
         config_dir: pathlib.Path,
+        run_dir: pathlib.Path,
         template_file: str,
         output_file_name: str | None = None,
         context_loaders: list | None = None,
@@ -139,13 +140,14 @@ class Jinja2Templater:
     ):
         """Initializes the Jinja2Templater."""
         self.config_dir = config_dir
+        self.run_dir = run_dir
         self.template_file = template_file
         self.output_file_name = output_file_name
         self.context_loaders = context_loaders or []
         self.params = params or {}
 
     @prefect.task(name="Jinja2Templater")
-    def __call__(self, run_dir: pathlib.Path) -> str:
+    def __call__(self) -> str:
         """Runs the Jinja2 templating task."""
         context = {}
 
@@ -157,7 +159,7 @@ class Jinja2Templater:
                 loader_cls = _registry[loader_type]
                 loader_params = loader_cfg.get("params", {})
                 loader_instance = loader_cls(**loader_params)
-                data = loader_instance(run_dir)
+                data = loader_instance(self.run_dir)
                 context.update({assign_to: data})
             else:
                 print(f"Warning: Unknown context loader type: {loader_type}")
@@ -169,7 +171,7 @@ class Jinja2Templater:
         content = render_template(template_path, context)
 
         if self.output_file_name:
-            out_path = run_dir / self.output_file_name
+            out_path = self.run_dir / self.output_file_name
             out_path.parent.mkdir(parents=True, exist_ok=True)
             with open(out_path, "w") as f:
                 f.write(content)

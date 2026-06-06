@@ -3,9 +3,11 @@
 import datetime
 import pathlib
 import shutil
+import sys
 
 from prefecture.core import flows
 import pytest
+
 
 
 @pytest.fixture
@@ -46,11 +48,12 @@ steps:
 import pathlib
 
 class CustomStep:
-    def __init__(self, config_dir, msg="Custom"):
+    def __init__(self, config_dir, run_dir, msg="Custom"):
         self.msg = msg
+        self.run_dir = run_dir
 
-    def __call__(self, run_dir: pathlib.Path):
-        out_path = run_dir / "custom.txt"
+    def __call__(self):
+        out_path = self.run_dir / "custom.txt"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "w") as f:
             f.write(self.msg)
@@ -107,8 +110,14 @@ def test_run_flow_fullclass(test_env):
 
 def test_run_flow_custom(test_env):
     """Test running flow with custom PYTHONPATH and step."""
-    _, _, _, custom_config = test_env
+    tmp_path, _, _, custom_config = test_env
+    resolved_tmp_path = str(pathlib.Path(tmp_path).resolve())
+
+    assert resolved_tmp_path not in sys.path
+
     flows.run_flow(str(custom_config))
+
+    assert resolved_tmp_path not in sys.path
 
     today_str = datetime.datetime.now().strftime("%Y-%m-%d")
     out_path = (

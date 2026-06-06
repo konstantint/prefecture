@@ -25,9 +25,9 @@ def test_generate_template_only_params(test_template_dir):
         "params": {"name": "World", "last_weeks_digest": "None"},
     }
     generator = templating.Jinja2Templater(
-        config_dir=test_template_dir, **prompt_config
+        config_dir=test_template_dir, run_dir=test_template_dir, **prompt_config
     )
-    generated_prompt = generator(run_dir=test_template_dir)
+    generated_prompt = generator()
     assert generated_prompt == "Hello World! Previous: None"
 
 
@@ -53,9 +53,9 @@ def test_generate_template_with_loader(test_template_dir):
     }
 
     generator = templating.Jinja2Templater(
-        config_dir=test_template_dir, **prompt_config
+        config_dir=test_template_dir, run_dir=run_dir, **prompt_config
     )
-    generated_prompt = generator(run_dir=run_dir)
+    generated_prompt = generator()
     assert generated_prompt == "Hello LoaderTest! Previous: Old content"
 
 
@@ -86,9 +86,9 @@ def test_generate_template_with_loader_remap(test_template_dir):
 
     try:
         generator = templating.Jinja2Templater(
-            config_dir=test_template_dir, **prompt_config
+            config_dir=test_template_dir, run_dir=run_dir, **prompt_config
         )
-        generated_prompt = generator(run_dir=run_dir)
+        generated_prompt = generator()
         assert generated_prompt == "Previous: Old content"
     finally:
         if template_file.exists():
@@ -122,9 +122,9 @@ def test_run_dir_file_loader_days_ago(test_template_dir):
     }
 
     generator = templating.Jinja2Templater(
-        config_dir=test_template_dir, **prompt_config
+            config_dir=test_template_dir, run_dir=run_dir, **prompt_config
     )
-    generated_prompt = generator(run_dir=run_dir)
+    generated_prompt = generator()
     assert (
         generated_prompt == "Hello LoaderTest! Previous: Previous content"
     )
@@ -148,18 +148,18 @@ def test_run_dir_file_loader_fail_on_error(test_template_dir):
     }
 
     generator = templating.Jinja2Templater(
-        config_dir=test_template_dir, **prompt_config
+        config_dir=test_template_dir, run_dir=run_dir, **prompt_config
     )
-    generated_prompt = generator(run_dir=run_dir)
+    generated_prompt = generator()
     assert generated_prompt == "Hello LoaderTest! Previous: None"
 
     prompt_config["context_loaders"][0]["params"]["fail_on_error"] = True
     generator = templating.Jinja2Templater(
-        config_dir=test_template_dir, **prompt_config
+        config_dir=test_template_dir, run_dir=run_dir, **prompt_config
     )
 
     with pytest.raises(ValueError) as exc_info:
-        generator(run_dir=run_dir)
+        generator()
     assert "could not load" in str(exc_info.value)
 
 
@@ -171,13 +171,13 @@ def test_artifact_key_generation(test_template_dir):
         "params": {"name": "World", "last_weeks_digest": "None"},
     }
     generator = templating.Jinja2Templater(
-        config_dir=test_template_dir, **prompt_config
+        config_dir=test_template_dir, run_dir=test_template_dir, **prompt_config
     )
 
     with mock.patch(
         "prefect.artifacts.create_markdown_artifact"
     ) as mock_create_artifact:
-        generator(run_dir=test_template_dir)
+        generator()
 
         mock_create_artifact.assert_called_once_with(
             key="my-special-prompt-md",
@@ -193,13 +193,13 @@ def test_artifact_key_generation_fallback(test_template_dir):
         "params": {"name": "World", "last_weeks_digest": "None"},
     }
     generator = templating.Jinja2Templater(
-        config_dir=test_template_dir, **prompt_config
+        config_dir=test_template_dir, run_dir=test_template_dir, **prompt_config
     )
 
     with mock.patch(
         "prefect.artifacts.create_markdown_artifact"
     ) as mock_create_artifact:
-        generator(run_dir=test_template_dir)
+        generator()
 
         mock_create_artifact.assert_called_once_with(
             key="jinja2",
@@ -236,9 +236,9 @@ def test_run_dir_file_loader_load_json_success(test_template_dir):
 
     try:
         generator = templating.Jinja2Templater(
-            config_dir=test_template_dir, **prompt_config
+            config_dir=test_template_dir, run_dir=run_dir, **prompt_config
         )
-        generated_prompt = generator(run_dir=run_dir)
+        generated_prompt = generator()
         assert generated_prompt == "Items: A B "
     finally:
         if template_file.exists():
@@ -266,12 +266,12 @@ def test_run_dir_file_loader_load_json_failure(test_template_dir):
     }
 
     generator = templating.Jinja2Templater(
-        config_dir=test_template_dir, **prompt_config
+        config_dir=test_template_dir, run_dir=run_dir, **prompt_config
     )
 
     # Expecting json.JSONDecodeError
     with pytest.raises(json.JSONDecodeError):
-        generator(run_dir=run_dir)
+        generator()
 
 
 def test_sqlalchemy_loader(test_template_dir):
@@ -310,9 +310,9 @@ def test_sqlalchemy_loader(test_template_dir):
 
     try:
         generator = templating.Jinja2Templater(
-            config_dir=test_template_dir, **prompt_config
+            config_dir=test_template_dir, run_dir=test_template_dir, **prompt_config
         )
-        generated_prompt = generator(run_dir=test_template_dir)
+        generated_prompt = generator()
         assert generated_prompt == "Users: Alice (Admin) Bob (User) "
     finally:
         if template_file.exists():
@@ -338,9 +338,9 @@ def test_datetime_now_loader(test_template_dir):
 
     try:
         generator = templating.Jinja2Templater(
-            config_dir=test_template_dir, **prompt_config
+            config_dir=test_template_dir, run_dir=test_template_dir, **prompt_config
         )
-        generated_prompt = generator(run_dir=test_template_dir)
+        generated_prompt = generator()
         import datetime
         expected_year = datetime.datetime.now().strftime("%Y")
         assert generated_prompt == f"Current year: {expected_year}"

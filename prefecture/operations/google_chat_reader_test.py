@@ -30,6 +30,7 @@ def test_google_chat_reader_success_no_retry(mock_build, tmp_path):
 
     reader = GoogleChatReader(
         config_dir=str(tmp_path),
+        run_dir=str(tmp_path),
         client_id="test_client",
         client_secret="test_secret",
         refresh_token="test_token",
@@ -37,7 +38,7 @@ def test_google_chat_reader_success_no_retry(mock_build, tmp_path):
     )
     reader._get_credentials = mock.Mock()
 
-    reader(run_dir=str(tmp_path))
+    reader()
 
     assert mock_execute.call_count == 1
     
@@ -85,6 +86,7 @@ def test_google_chat_reader_retry_and_success(mock_build, tmp_path):
 
     reader = GoogleChatReader(
         config_dir=str(tmp_path),
+        run_dir=str(tmp_path),
         client_id="test_client",
         client_secret="test_secret",
         refresh_token="test_token",
@@ -94,7 +96,7 @@ def test_google_chat_reader_retry_and_success(mock_build, tmp_path):
     )
     reader._get_credentials = mock.Mock()
 
-    reader(run_dir=str(tmp_path))
+    reader()
 
     assert mock_execute.call_count == 3
     
@@ -123,6 +125,7 @@ def test_google_chat_reader_max_retries_exceeded(mock_build, tmp_path):
 
     reader = GoogleChatReader(
         config_dir=str(tmp_path),
+        run_dir=str(tmp_path),
         client_id="test_client",
         client_secret="test_secret",
         refresh_token="test_token",
@@ -134,7 +137,7 @@ def test_google_chat_reader_max_retries_exceeded(mock_build, tmp_path):
 
     # Should raise HttpError after 1 initial + 2 retries = 3 attempts
     with pytest.raises(HttpError):
-        reader(run_dir=str(tmp_path))
+        reader()
 
     assert mock_execute.call_count == 3
 
@@ -157,6 +160,7 @@ def test_google_chat_reader_non_retryable_error(mock_build, tmp_path):
 
     reader = GoogleChatReader(
         config_dir=str(tmp_path),
+        run_dir=str(tmp_path),
         client_id="test_client",
         client_secret="test_secret",
         refresh_token="test_token",
@@ -168,6 +172,6 @@ def test_google_chat_reader_non_retryable_error(mock_build, tmp_path):
 
     # Should raise HttpError immediately on first attempt
     with pytest.raises(HttpError):
-        reader(run_dir=str(tmp_path))
+        reader()
 
     assert mock_execute.call_count == 1

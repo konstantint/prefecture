@@ -1,4 +1,4 @@
-# Specification: `prefecture/google_chat_reader.py`
+# Specification: `prefecture/operations/google_chat_reader.py`
 
 ## 1. Overview
 The `GoogleChatReader` component is responsible for fetching recent messages from specified Google Chat spaces and storing the raw responses as well as a single combined file. It uses the Google Chat API with OAuth 2.0 authentication.
@@ -48,7 +48,7 @@ After processing all spaces:
 The component must be executable as a standalone binary for testing and manual runs.
 
 ```bash
-python3 prefecture/google_chat_reader.py --config <path_to_config.yaml>
+python3 prefecture/operations/google_chat_reader.py --config <path_to_config.yaml>
 ```
 
 ## 5. Testing

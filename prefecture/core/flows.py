@@ -10,16 +10,16 @@ import sys
 import prefect
 from prefect import runtime
 
-from prefecture import config
+from prefecture.core import config
 
 STEP_MAP = {
-    "jinja2": "prefecture.templating.Jinja2Templater",
-    "gemini": "prefecture.gemini.GeminiGenerator",
-    "gemini_image": "prefecture.gemini_image.GeminiImageGenerator",
-    "ntfy": "prefecture.ntfy.NtfySender",
-    "mailer": "prefecture.mailer.GmailMailer",
-    "google_chat_reader": "prefecture.google_chat_reader.GoogleChatReader",
-    "copyfile": "prefecture.copyfile.CopyFile",
+    "jinja2": "prefecture.operations.templating.Jinja2Templater",
+    "gemini": "prefecture.operations.gemini.GeminiGenerator",
+    "gemini_image": "prefecture.operations.gemini_image.GeminiImageGenerator",
+    "ntfy": "prefecture.operations.ntfy.NtfySender",
+    "mailer": "prefecture.operations.mailer.GmailMailer",
+    "google_chat_reader": "prefecture.operations.google_chat_reader.GoogleChatReader",
+    "copyfile": "prefecture.operations.copyfile.CopyFile",
 }
 
 

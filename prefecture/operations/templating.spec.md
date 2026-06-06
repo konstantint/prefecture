@@ -3,7 +3,7 @@
 This document describes how templates are rendered and how context is loaded in `prefecture`.
 
 ## 1. Overview
-Template rendering is handled by the `Jinja2Templater` class inside `templating.py`. It combines a Jinja2 template with dynamic context loaded by `ContextLoader` implementations and static parameters.
+Template rendering is handled by the `Jinja2Templater` class inside `prefecture/operations/templating.py`. It combines a Jinja2 template with dynamic context loaded by `ContextLoader` implementations and static parameters.
 
 ## 2. Jinja2Templater
 `Jinja2Templater` is a callable component (decorated with `@task` for Prefect).

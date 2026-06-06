@@ -4,7 +4,7 @@ import datetime
 import pathlib
 import shutil
 
-from prefecture import flows
+from prefecture.core import flows
 import pytest
 
 
@@ -32,7 +32,7 @@ steps:
         f.write(f"""
 name: test_fullclass
 steps:
-  - prefecture.templating.Jinja2Templater:
+  - prefecture.operations.templating.Jinja2Templater:
       template_file: "{template_file}"
       output_file_name: "prompt.md"
       params:

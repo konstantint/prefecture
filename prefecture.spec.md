@@ -19,22 +19,26 @@ The package is structured as follows:
 ├── Dockerfile                # Dockerfile for worker
 └── prefecture/               # Package source code
     ├── __init__.py
-    ├── cli.py                # CLI entry point
-    ├── config.py             # Parses YAML configs with env var substitution
-    ├── templating.py         # Jinja2Templater class, context loaders, & rendering helper
-    ├── gemini.py             # GeminiGenerator class
-    ├── google_chat_reader.py # GoogleChatReader class
-    ├── ntfy.py               # NtfySender class
-    ├── mailer.py             # GmailMailer class
-    ├── flows.py              # Prefect @flow definition (single flow)
-    └── email_base.html.j2    # Email base template (encapsulated)
+    ├── core/                 # Core orchestration module
+    │   ├── cli.py            # CLI entry point
+    │   ├── config.py         # Parses YAML configs with env var substitution
+    │   └── flows.py          # Prefect @flow definition (single flow)
+    └── operations/           # Operation-related modules (tasks)
+        ├── copyfile.py       # CopyFile class
+        ├── email_base.html.j2 # Email base template
+        ├── gemini.py         # GeminiGenerator class
+        ├── gemini_image.py   # GeminiImageGenerator class
+        ├── google_chat_reader.py # GoogleChatReader class
+        ├── mailer.py         # GmailMailer class
+        ├── ntfy.py           # NtfySender class
+        └── templating.py     # Jinja2Templater class, context loaders, & rendering helper
 ```
 
 When used by a user, they can create a directory with their own configs and templates:
 
 ```text
 /my-digest-job
-├── prefect.yaml              # Prefect deployments pointing to prefecture.flows:run_flow
+├── prefect.yaml              # Prefect deployments pointing to prefecture.core.flows:run_flow
 ├── .env                      # Credentials
 ├── configs/
 │   ├── generate.yaml         # Config for generation steps
@@ -49,13 +53,13 @@ We use a step-based configuration approach. The YAML file defines a list of step
 Each step is defined by its class path (e.g., `python.module.PythonClass`) or a shorthand name for built-in components.
 
 Built-in shorthand mapping:
-*   `jinja2`: `prefecture.templating.Jinja2Templater`
-*   `gemini`: `prefecture.gemini.GeminiGenerator`
-*   `gemini_image`: `prefecture.gemini_image.GeminiImageGenerator`
-*   `mailer`: `prefecture.mailer.GmailMailer`
-*   `ntfy`: `prefecture.ntfy.NtfySender`
-*   `google_chat_reader`: `prefecture.google_chat_reader.GoogleChatReader`
-*   `copyfile`: `prefecture.copyfile.CopyFile`
+*   `jinja2`: `prefecture.operations.templating.Jinja2Templater`
+*   `gemini`: `prefecture.operations.gemini.GeminiGenerator`
+*   `gemini_image`: `prefecture.operations.gemini_image.GeminiImageGenerator`
+*   `mailer`: `prefecture.operations.mailer.GmailMailer`
+*   `ntfy`: `prefecture.operations.ntfy.NtfySender`
+*   `google_chat_reader`: `prefecture.operations.google_chat_reader.GoogleChatReader`
+*   `copyfile`: `prefecture.operations.copyfile.CopyFile`
 
 ### A. Business Logic: `configs/<name>.yaml`
 Defines the content and delivery of the digest. Supports environment variable substitution using `$VAR` or `${VAR}`.
@@ -116,7 +120,7 @@ The intended usage is to run `prefecture` with its dependencies using Docker as 
 
 All components are classes with a `__call__` method decorated with `@task`. They accept `config_dir` in `__init__` and `run_dir` in `__call__`.
 
-### A. `templating.Jinja2Templater`
+### A. `operations.templating.Jinja2Templater`
 *   Loads template (resolved relative to config file).
 *   Executes registered context loaders:
     *   `run_dir_file` (maps to `RunDirFileLoader`):
@@ -133,14 +137,14 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Writes output to `run_dir / output_file_name`.
 *   Publishes a Prefect markdown artifact named after the sanitized stem of `output_file_name` (falling back to "jinja2" if not provided).
 
-### B. `gemini.GeminiGenerator`
+### B. `operations.gemini.GeminiGenerator`
 *   Reads prompt from `run_dir / prompt_file_name`.
 *   Uses `google-genai` SDK.
 *   Supports optional Google Search grounding via `use_google_search` parameter.
 *   Writes output to `run_dir / output_file_name`.
 *   Publishes a Prefect markdown artifact named "digest".
 
-### C. `mailer.GmailMailer`
+### C. `operations.mailer.GmailMailer`
 *   Reads content from `run_dir / content_file_name`.
 *   Parses subject from frontmatter.
 *   Encapsulates email template (`email_base.html.j2`).
@@ -148,16 +152,16 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Supports an optional `attachments` list of dicts. For now, it supports:
     *   `image_file_name` (str): Image filename resolved relative to `run_dir` to be attached to the email.
 
-### D. `ntfy.NtfySender`
+### D. `operations.ntfy.NtfySender`
 *   Reads content from `run_dir / content_file_name` OR uses explicit `content` string.
 *   Sends notification with configurable `title` and `tags` to configured host and topic.
 
-### E. `google_chat_reader.GoogleChatReader`
+### E. `operations.google_chat_reader.GoogleChatReader`
 *   Reads messages from Google Chat spaces.
 *   Uses OAuth 2.0 for authentication.
 *   Saves raw JSON and simplified `data.json`.
 
-### F. `copyfile.CopyFile`
+### F. `operations.copyfile.CopyFile`
 *   Copies a file from `from_path` to `to_path`.
 *   Paths are resolved relative to `run_dir` if they are not absolute.
 

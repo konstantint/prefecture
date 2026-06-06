@@ -5,7 +5,7 @@ import sys
 
 import dotenv
 
-from prefecture import flows
+from prefecture.core import flows
 
 
 def main():

@@ -5,10 +5,10 @@ import os
 from unittest import mock
 import pytest
 from googleapiclient.errors import HttpError
-from prefecture.google_chat_reader import GoogleChatReader
+from prefecture.operations.google_chat_reader import GoogleChatReader
 
 
-@mock.patch('prefecture.google_chat_reader.discovery.build')
+@mock.patch('prefecture.operations.google_chat_reader.discovery.build')
 def test_google_chat_reader_success_no_retry(mock_build, tmp_path):
     """Test successful read without any retries."""
     mock_service = mock.Mock()
@@ -50,7 +50,7 @@ def test_google_chat_reader_success_no_retry(mock_build, tmp_path):
         assert data[0]['text'] == 'Hello'
 
 
-@mock.patch('prefecture.google_chat_reader.discovery.build')
+@mock.patch('prefecture.operations.google_chat_reader.discovery.build')
 def test_google_chat_reader_retry_and_success(mock_build, tmp_path):
     """Test retrying on transient errors and eventually succeeding."""
     mock_service = mock.Mock()
@@ -104,7 +104,7 @@ def test_google_chat_reader_retry_and_success(mock_build, tmp_path):
         assert data[0]['text'] == 'Hello after retry'
 
 
-@mock.patch('prefecture.google_chat_reader.discovery.build')
+@mock.patch('prefecture.operations.google_chat_reader.discovery.build')
 def test_google_chat_reader_max_retries_exceeded(mock_build, tmp_path):
     """Test that it eventually raises error if retries are exhausted."""
     mock_service = mock.Mock()
@@ -139,7 +139,7 @@ def test_google_chat_reader_max_retries_exceeded(mock_build, tmp_path):
     assert mock_execute.call_count == 3
 
 
-@mock.patch('prefecture.google_chat_reader.discovery.build')
+@mock.patch('prefecture.operations.google_chat_reader.discovery.build')
 def test_google_chat_reader_non_retryable_error(mock_build, tmp_path):
     """Test that non-retryable errors (e.g. 400) fail immediately."""
     mock_service = mock.Mock()

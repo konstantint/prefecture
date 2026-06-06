@@ -1,7 +1,7 @@
 prefect-version: 3.0.0
 deployments:
   - name: weekly-digest
-    entrypoint: prefecture.flows:run_flow
+    entrypoint: prefecture.core.flows:run_flow
     parameters:
       config_file: "./configs/weekly_digest/config.yaml"
     schedules:

@@ -36,7 +36,7 @@ class GeminiGenerator:
         self.config_dir = config_dir
 
     # cache_policy NO_CACHE because otherwise we get
-    #   JSON error: Unable to serialize unknown type: <class 'prefecture.gemini.GeminiGenerator'>
+    #   JSON error: Unable to serialize unknown type: <class 'prefecture.operations.gemini.GeminiGenerator'>
     @prefect.task(name="GeminiGenerator", cache_policy=cache_policies.NO_CACHE)
     def __call__(self, run_dir: pathlib.Path) -> str:
         """Runs the Gemini generation task."""

@@ -4,7 +4,7 @@ import json
 import pathlib
 from unittest import mock
 
-from prefecture import templating
+from prefecture.operations import templating
 import pytest
 
 

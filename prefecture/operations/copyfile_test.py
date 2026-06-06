@@ -2,7 +2,7 @@
 
 import pathlib
 
-from prefecture import copyfile
+from prefecture.operations import copyfile
 import pytest
 
 

@@ -5,7 +5,7 @@ from email import message_from_bytes
 import pathlib
 from unittest import mock
 
-from prefecture.mailer import GmailMailer
+from prefecture.operations.mailer import GmailMailer
 import pytest
 
 

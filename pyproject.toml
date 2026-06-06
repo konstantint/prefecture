@@ -24,7 +24,7 @@ Homepage = "https://github.com/konstantint/prefecture"
 Repository = "https://github.com/konstantint/prefecture"
 
 [project.scripts]
-prefecture = "prefecture.cli:main"
+prefecture = "prefecture.core.cli:main"
 
 [build-system]
 requires = ["hatchling"]

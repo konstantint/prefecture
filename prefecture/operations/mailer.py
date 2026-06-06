@@ -17,7 +17,7 @@ from markdown_it import MarkdownIt
 import premailer
 import prefect
 from prefect import cache_policies
-from prefecture import templating
+from prefecture.operations import templating
 import requests
 import yaml
 
@@ -82,7 +82,7 @@ class GmailMailer:
 
         context = {"content": html_body, "subject": subject}
 
-        env = jinja2.Environment(loader=jinja2.PackageLoader("prefecture", ""))
+        env = jinja2.Environment(loader=jinja2.PackageLoader("prefecture.operations", ""))
         template = env.get_template("email_base.html.j2")
         rendered_html = template.render(context)
 

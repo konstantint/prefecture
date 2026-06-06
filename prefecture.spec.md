@@ -56,6 +56,7 @@ Built-in shorthand mapping:
 *   `jinja2`: `prefecture.operations.templating.Jinja2Templater`
 *   `gemini`: `prefecture.operations.gemini.GeminiGenerator`
 *   `gemini_image`: `prefecture.operations.gemini_image.GeminiImageGenerator`
+*   `gemini_tts`: `prefecture.operations.gemini_tts.GeminiTtsGenerator`
 *   `mailer`: `prefecture.operations.mailer.GmailMailer`
 *   `ntfy`: `prefecture.operations.ntfy.NtfySender`
 *   `google_chat_reader`: `prefecture.operations.google_chat_reader.GoogleChatReader`
@@ -144,7 +145,22 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Writes output to `run_dir / output_file_name`.
 *   Publishes a Prefect markdown artifact named "digest".
 
-### C. `operations.mailer.GmailMailer`
+### C. `operations.gemini_image.GeminiImageGenerator`
+*   Reads prompt from `run_dir / prompt_file_name` OR uses explicit `prompt` string.
+*   Uses `google-genai` SDK.
+*   Supports optional `aspect_ratio` configuration.
+*   Writes output to `run_dir / output_file_name` (determines/guesses format and suffix dynamically if not provided).
+*   Publishes a Prefect image artifact of the generated image.
+
+### D. `operations.gemini_tts.GeminiTtsGenerator`
+*   Reads prompt from `run_dir / prompt_file_name` OR uses explicit `prompt` string.
+*   Uses `google-genai` SDK.
+*   Supports configurable voice via `voice` parameter.
+*   Supports request `timeout` (defaulting to 300s).
+*   Streams chunks to `run_dir / output_file_name` and formats as standard `.wav` if raw PCM is returned.
+*   Publishes a Prefect link artifact referencing the generated `.wav` file.
+
+### E. `operations.mailer.GmailMailer`
 *   Reads content from `run_dir / content_file_name`.
 *   Parses subject from frontmatter.
 *   Encapsulates email template (`email_base.html.j2`).
@@ -152,16 +168,16 @@ All components are classes with a `__call__` method decorated with `@task`. They
 *   Supports an optional `attachments` list of dicts. For now, it supports:
     *   `image_file_name` (str): Image filename resolved relative to `run_dir` to be attached to the email.
 
-### D. `operations.ntfy.NtfySender`
+### F. `operations.ntfy.NtfySender`
 *   Reads content from `run_dir / content_file_name` OR uses explicit `content` string.
 *   Sends notification with configurable `title` and `tags` to configured host and topic.
 
-### E. `operations.google_chat_reader.GoogleChatReader`
+### G. `operations.google_chat_reader.GoogleChatReader`
 *   Reads messages from Google Chat spaces.
 *   Uses OAuth 2.0 for authentication.
 *   Saves raw JSON and simplified `data.json`.
 
-### F. `operations.copyfile.CopyFile`
+### H. `operations.copyfile.CopyFile`
 *   Copies a file from `from_path` to `to_path`.
 *   Paths are resolved relative to `run_dir` if they are not absolute.
 

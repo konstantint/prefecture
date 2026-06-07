@@ -59,6 +59,9 @@ class NtfySender:
         if self.host.endswith("/"):
             self.host = self.host[:-1]
 
+    def __repr__(self) -> str:
+        return f"NtfySender(host={repr(self.host)}, topic={repr(self.topic)}, title={repr(self.title)}, tags={repr(self.tags)}, content_file_name={repr(self.content_file_name)}, content={repr(self.content)})"
+
     @prefect.task(name="NtfySender")
     def __call__(self) -> None:
         """Sends notification."""

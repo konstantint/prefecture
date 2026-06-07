@@ -66,6 +66,9 @@ class GeminiImageGenerator:
         self.config_dir = config_dir
         self.run_dir = run_dir
 
+    def __repr__(self) -> str:
+        return f"GeminiImageGenerator(model={repr(self.model)}, prompt_file_name={repr(self.prompt_file_name)}, prompt={repr(self.prompt)}, output_file_name={repr(self.output_file_name)}, aspect_ratio={repr(self.aspect_ratio)})"
+
     @prefect.task(name="GeminiImageGenerator", cache_policy=cache_policies.NO_CACHE)
     def __call__(self) -> pathlib.Path:
         """Runs the Gemini image generation task."""

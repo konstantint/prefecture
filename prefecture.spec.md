@@ -140,7 +140,7 @@ The intended usage is to run `prefecture` with its dependencies using Docker as 
 
 ## 5. Core Components (Object-Oriented Tasks)
 
-All components are classes with a `__call__` method decorated with `@task`. They accept `config_dir` and `run_dir` in `__init__` (as keyword-only arguments), and take no arguments in `__call__`.
+All components are classes with a `__call__` method decorated with `@task`. They accept `config_dir` and `run_dir` in `__init__` (as keyword-only arguments), and take no arguments in `__call__`. Every operator class must also define a `__repr__` method that outputs the `ClassName(arg=value, arg=value, ...)` used to construct the operator, keeping the output concise.
 
 ### A. `operations.templating.Jinja2Templater`
 *   Loads template (resolved relative to config file).

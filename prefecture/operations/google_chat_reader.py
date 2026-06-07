@@ -45,6 +45,9 @@ class GoogleChatReader:
         self.num_retries = num_retries
         self.initial_backoff = initial_backoff
 
+    def __repr__(self) -> str:
+        return f"GoogleChatReader(spaces={repr(self.spaces)}, max_messages={self.max_messages}, max_hours_ago={self.max_hours_ago})"
+
     def _get_credentials(self) -> credentials.Credentials:
         """Gets Google API credentials."""
         creds = credentials.Credentials(

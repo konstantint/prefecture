@@ -97,8 +97,10 @@ def _build_dependency_graph(instantiated_steps: List[Any]) -> Dict[Any, Set[Any]
         for dep in deps:
             if isinstance(dep, str):
                 if dep in producer_graph:
+                    # print(f"Adding dep for step {step.__class__.__name__} via {dep} on {producer_graph[dep].__class__.__name__}")
                     resolved_deps.add(producer_graph[dep])
             else:
+                # print(f"Adding raw dep for step {step.__class__.__name__} on {dep.__class__.__name__}")
                 resolved_deps.add(dep)
         step_deps[step] = resolved_deps
 
@@ -147,6 +149,7 @@ def graph(
             # 2. Submit them to the executor
             for step in to_submit:
                 del g[step]
+                print(f"Submitting step {repr(step)} to the executor as it has no required preceding steps.")
                 future = executor.submit(step)
                 running_futures[future] = step
 
@@ -164,6 +167,7 @@ def graph(
             # 4. Process completed steps
             for future in done:
                 completed_step = running_futures.pop(future)
+                print(f"Completing step: {repr(completed_step)}.")
                 # Propagate any execution exception
                 future.result()
 

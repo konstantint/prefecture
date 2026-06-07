@@ -47,6 +47,9 @@ class GmailMailer:
         self.config_dir = config_dir
         self.run_dir = run_dir
 
+    def __repr__(self) -> str:
+        return f"GmailMailer(recipients={self.recipients}, content_file_name={repr(self.content_file_name)}, attachments={self.attachments})"
+
     def get_access_token(self) -> str:
         """Gets OAuth2 access token for Gmail."""
         response = requests.post(

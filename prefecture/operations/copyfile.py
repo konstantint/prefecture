@@ -23,6 +23,9 @@ class CopyFile:
         self.from_path = from_path
         self.to_path = to_path
 
+    def __repr__(self) -> str:
+        return f"CopyFile(from_path={repr(self.from_path)}, to_path={repr(self.to_path)})"
+
     @prefect.task(name="CopyFile")
     def __call__(self) -> None:
         """Copies the file."""

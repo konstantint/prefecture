@@ -215,6 +215,9 @@ class Jinja2Templater:
             else:
                 print(f"Warning: Unknown context loader type: {loader_type}")
 
+    def __repr__(self) -> str:
+        return f"Jinja2Templater(template_file={repr(self.template_file)}, output_file_name={repr(self.output_file_name)}, params={self.params})"
+
     @prefect.task(name="Jinja2Templater")
     def __call__(self) -> str:
         """Runs the Jinja2 templating task."""
@@ -235,6 +238,7 @@ class Jinja2Templater:
             out_path = self.run_dir / self.output_file_name
             out_path.parent.mkdir(parents=True, exist_ok=True)
             with open(out_path, "w") as f:
+                print(f"Writing to {f}.")
                 f.write(content)
 
         artifact_key = "jinja2"

@@ -156,6 +156,9 @@ class GeminiTtsGenerator:
         self.config_dir = config_dir
         self.run_dir = run_dir
 
+    def __repr__(self) -> str:
+        return f"GeminiTtsGenerator(model={repr(self.model)}, voice={repr(self.voice)}, prompt_file_name={repr(self.prompt_file_name)}, prompt={repr(self.prompt)}, output_file_name={repr(self.output_file_name)})"
+
     @prefect.task(name="GeminiTtsGenerator", cache_policy=cache_policies.NO_CACHE)
     def __call__(self) -> pathlib.Path:
         """Runs the Gemini TTS generation task."""

@@ -37,6 +37,9 @@ class GeminiGenerator:
         self.config_dir = config_dir
         self.run_dir = run_dir
 
+    def __repr__(self) -> str:
+        return f"GeminiGenerator(model={repr(self.model)}, prompt_file_name={repr(self.prompt_file_name)}, output_file_name={repr(self.output_file_name)}, use_google_search={self.use_google_search})"
+
     # cache_policy NO_CACHE because otherwise we get
     #   JSON error: Unable to serialize unknown type: <class 'prefecture.operations.gemini.GeminiGenerator'>
     @prefect.task(name="GeminiGenerator", cache_policy=cache_policies.NO_CACHE)

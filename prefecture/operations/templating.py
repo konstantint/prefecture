@@ -238,7 +238,6 @@ class Jinja2Templater:
             out_path = self.run_dir / self.output_file_name
             out_path.parent.mkdir(parents=True, exist_ok=True)
             with open(out_path, "w") as f:
-                print(f"Writing to {f}.")
                 f.write(content)
 
         artifact_key = "jinja2"

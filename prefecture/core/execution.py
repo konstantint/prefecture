@@ -1,6 +1,5 @@
 """Execution logic for Prefecture flows."""
 
-import concurrent.futures
 import contextlib
 import importlib
 import pathlib
@@ -126,53 +125,33 @@ def _has_loop(graph: Dict[Any, Set[Any]]) -> bool:
 def graph(
     cfg: Dict[str, Any], run_dir: pathlib.Path, config_dir: pathlib.Path
 ) -> None:
-    """Executes the steps in parallel using a dependency graph and a ThreadPoolExecutor."""
+    """Executes the steps in parallel using Prefect's native task runner."""
     steps = _instantiate_steps(cfg, run_dir, config_dir)
     deps_graph = _build_dependency_graph(steps)
 
     if _has_loop(deps_graph):
         raise ValueError("The dependency graph contains a loop.")
 
-    # We will mutate a copy of the graph as steps complete
-    g = {node: set(deps) for node, deps in deps_graph.items()}
+    futures = {}
+    submitted = set()
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        running_futures = {}
+    while len(submitted) < len(steps):
+        progress = False
+        for step in steps:
+            if step in submitted:
+                continue
 
-        while g or running_futures:
-            # 1. Find all steps with no dependencies that are not already running
-            to_submit = [
-                step for step, deps in g.items()
-                if not deps and step not in running_futures.values()
-            ]
+            deps = deps_graph[step]
+            if deps.issubset(submitted):
+                wait_for_futures = [futures[dep] for dep in deps]
+                print(f"Submitting step {repr(step)} with {len(wait_for_futures)} dependencies.")
+                futures[step] = step.__call__.submit(wait_for=wait_for_futures)
+                submitted.add(step)
+                progress = True
 
-            # 2. Submit them to the executor
-            for step in to_submit:
-                del g[step]
-                print(f"Submitting step {repr(step)} to the executor as it has no required preceding steps.")
-                future = executor.submit(step)
-                running_futures[future] = step
+        if not progress:
+            raise ValueError("Deadlock detected in execution graph.")
 
-            if not running_futures:
-                if g:
-                    raise ValueError("Deadlock detected in execution graph.")
-                break
-
-            # 3. Wait for the next job to complete
-            done, _ = concurrent.futures.wait(
-                running_futures.keys(),
-                return_when=concurrent.futures.FIRST_COMPLETED
-            )
-
-            # 4. Process completed steps
-            for future in done:
-                completed_step = running_futures.pop(future)
-                print(f"Completing step: {repr(completed_step)}.")
-                # Propagate any execution exception
-                future.result()
-
-                # Remove this step from the dependencies of all remaining steps
-                for remaining_step in g:
-                    g[remaining_step].discard(completed_step)
-
-
+    # Wait for all tasks to complete and propagate any exceptions
+    for step in steps:
+        futures[step].result()

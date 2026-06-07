@@ -296,6 +296,8 @@ def test_graph_executes_in_topological_order_and_detects_loops(tmp_path):
 
     execution_order = []
 
+    import prefect
+    
     class DummyStep:
 
         def __init__(self, name, dependencies=None, outputs=None):
@@ -303,6 +305,7 @@ def test_graph_executes_in_topological_order_and_detects_loops(tmp_path):
             self._dependencies = dependencies or set()
             self._outputs = outputs or set()
 
+        @prefect.task
         def __call__(self):
             import time
 
@@ -323,12 +326,16 @@ def test_graph_executes_in_topological_order_and_detects_loops(tmp_path):
     s3 = DummyStep("s3", outputs={"/fileB"})
     s4 = DummyStep("s4", dependencies={"/fileA", "/fileB"})
 
+    @prefect.flow
+    def test_flow_1():
+        execution.graph({}, run_dir, config_dir)
+
     with mock.patch(
         "prefecture.core.execution._instantiate_steps"
     ) as mock_instantiate:
         mock_instantiate.return_value = [s1, s2, s3, s4]
 
-        execution.graph({}, run_dir, config_dir)
+        test_flow_1()
 
         # Verify s1 executed before s2 and s4, s3 executed before s4
         assert execution_order.index("s1") < execution_order.index("s2")
@@ -339,24 +346,32 @@ def test_graph_executes_in_topological_order_and_detects_loops(tmp_path):
     s1_cycle = DummyStep("s1", dependencies={"/fileB"}, outputs={"/fileA"})
     s2_cycle = DummyStep("s2", dependencies={"/fileA"}, outputs={"/fileB"})
 
+    @prefect.flow
+    def test_flow_2():
+        execution.graph({}, run_dir, config_dir)
+
     with mock.patch(
         "prefecture.core.execution._instantiate_steps"
     ) as mock_instantiate:
         mock_instantiate.return_value = [s1_cycle, s2_cycle]
         with pytest.raises(ValueError) as exc_info:
-            execution.graph({}, run_dir, config_dir)
+            test_flow_2()
         assert "contains a loop" in str(exc_info.value)
 
     # Check duplicate outputs detection
     s1_dup = DummyStep("s1", outputs={"/fileA"})
     s2_dup = DummyStep("s2", outputs={"/fileA"})
 
+    @prefect.flow
+    def test_flow_3():
+        execution.graph({}, run_dir, config_dir)
+
     with mock.patch(
         "prefecture.core.execution._instantiate_steps"
     ) as mock_instantiate:
         mock_instantiate.return_value = [s1_dup, s2_dup]
         with pytest.raises(ValueError) as exc_info:
-            execution.graph({}, run_dir, config_dir)
+            test_flow_3()
         assert "produced by multiple steps" in str(exc_info.value)
 
 

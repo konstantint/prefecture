@@ -9,6 +9,8 @@ import dotenv
 from google import genai
 from google.genai import types
 import prefect
+from prefect.tasks import exponential_backoff
+from prefecture.core.caching import operator_cache_key
 from prefect import artifacts
 from prefect import cache_policies
 
@@ -69,7 +71,7 @@ class GeminiImageGenerator:
     def __repr__(self) -> str:
         return f"GeminiImageGenerator(model={repr(self.model)}, prompt_file_name={repr(self.prompt_file_name)}, prompt={repr(self.prompt)}, output_file_name={repr(self.output_file_name)}, aspect_ratio={repr(self.aspect_ratio)})"
 
-    @prefect.task(name="GeminiImageGenerator", cache_policy=cache_policies.NO_CACHE)
+    @prefect.task(name="GeminiImageGenerator", cache_policy=cache_policies.NO_CACHE, retries=5, retry_delay_seconds=exponential_backoff(backoff_factor=2))
     def __call__(self) -> pathlib.Path:
         """Runs the Gemini image generation task."""
         if self.prompt:

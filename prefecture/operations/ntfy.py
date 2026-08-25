@@ -6,6 +6,7 @@ import sys
 
 import dotenv
 import prefect
+from prefecture.core.caching import operator_cache_key
 from prefect import cache_policies
 import requests
 from requests import auth

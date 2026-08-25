@@ -16,6 +16,7 @@ import jinja2
 from markdown_it import MarkdownIt
 import premailer
 import prefect
+from prefecture.core.caching import operator_cache_key
 from prefect import cache_policies
 from prefecture.operations import templating
 import requests

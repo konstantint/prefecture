@@ -13,6 +13,7 @@ from google.oauth2 import credentials
 from google_auth_oauthlib import flow
 from googleapiclient import discovery
 import prefect
+from prefecture.core.caching import operator_cache_key
 import slugify
 
 SCOPES = ['https://www.googleapis.com/auth/chat.messages.readonly']
@@ -99,8 +100,14 @@ class GoogleChatReader:
                 else:
                     raise
 
-    @prefect.task(name="GoogleChatReader")
-    def __call__(self) -> None:
+    def cache_key(self) -> str | None:
+        out_path = os.path.join(self.run_dir, 'chat', 'data.json')
+        if not os.path.exists(out_path):
+            return None
+        return f"GoogleChatReader-{self.spaces}-{self.max_messages}-{self.run_dir}"
+
+    @prefect.task(name="GoogleChatReader", cache_key_fn=operator_cache_key, persist_result=True)
+    def __call__(self) -> str:
         """Reads messages from Google Chat and saves them."""
         print(f"Starting Google Chat reader in {self.run_dir}")
 
@@ -189,6 +196,7 @@ class GoogleChatReader:
         with open(data_file, 'w') as f:
             json.dump(all_messages, f, indent=2)
         print(f"Saved {len(all_messages)} simplified messages to {data_file}")
+        return data_file
 
     @property
     def outputs(self) -> set[str]:

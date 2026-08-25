@@ -8,9 +8,12 @@ import dotenv
 from google import genai
 from google.genai import types
 import prefect
+from prefecture.core.caching import operator_cache_key
 from prefect import artifacts
 from prefect import cache_policies
 
+
+from prefect.tasks import exponential_backoff
 
 class GeminiGenerator:
     """Generates text using Gemini API."""
@@ -40,9 +43,22 @@ class GeminiGenerator:
     def __repr__(self) -> str:
         return f"GeminiGenerator(model={repr(self.model)}, prompt_file_name={repr(self.prompt_file_name)}, output_file_name={repr(self.output_file_name)}, use_google_search={self.use_google_search})"
 
-    # cache_policy NO_CACHE because otherwise we get
-    #   JSON error: Unable to serialize unknown type: <class 'prefecture.operations.gemini.GeminiGenerator'>
-    @prefect.task(name="GeminiGenerator", cache_policy=cache_policies.NO_CACHE)
+    def cache_key(self) -> str | None:
+        """Returns the cache key for this task."""
+        key_parts = [
+            "GeminiGenerator",
+            self.model,
+            self.prompt_file_name,
+            self.output_file_name,
+            str(self.use_google_search),
+            str(self.run_dir),
+        ]
+        out_path = self.run_dir / self.output_file_name
+        if not out_path.exists():
+            return None
+        return "-".join(key_parts)
+
+    @prefect.task(name="GeminiGenerator", cache_key_fn=operator_cache_key, persist_result=True, retries=5, retry_delay_seconds=exponential_backoff(backoff_factor=2))
     def __call__(self) -> str:
         """Runs the Gemini generation task."""
         prompt_path = self.run_dir / self.prompt_file_name

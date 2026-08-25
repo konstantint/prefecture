@@ -9,6 +9,7 @@ import re
 
 import jinja2
 import prefect
+from prefecture.core.caching import operator_cache_key
 import sqlalchemy
 from prefect import artifacts
 from prefect import cache_policies
@@ -218,7 +219,13 @@ class Jinja2Templater:
     def __repr__(self) -> str:
         return f"Jinja2Templater(template_file={repr(self.template_file)}, output_file_name={repr(self.output_file_name)}, params={self.params})"
 
-    @prefect.task(name="Jinja2Templater")
+    def cache_key(self) -> str | None:
+        out_path = self.run_dir / self.output_file_name
+        if not out_path.exists():
+            return None
+        return f"Jinja2Templater-{self.template_file}-{self.output_file_name}-{self.run_dir}"
+
+    @prefect.task(name="Jinja2Templater", cache_key_fn=operator_cache_key, persist_result=True)
     def __call__(self) -> str:
         """Runs the Jinja2 templating task."""
         context = {}

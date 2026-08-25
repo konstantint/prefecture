@@ -4,6 +4,7 @@ import pathlib
 import shutil
 
 import prefect
+from prefecture.core.caching import operator_cache_key
 
 
 class CopyFile:

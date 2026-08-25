@@ -15,8 +15,8 @@ Prefecture supports two modes of flow execution:
 - Instantiates all steps defined in the configuration.
 - Constructs a step-to-step dependency graph mapping step objects to their required ancestor step objects.
 - Detects cycles/loops and fails early if any cycle is detected.
-- Executes independent steps in parallel using a `ThreadPoolExecutor`.
-- Tracks completed steps dynamically, scheduling dependent steps as soon as their dependencies have successfully completed.
+- Executes independent steps in parallel using Prefect's native task runners.
+- Uses `Task.submit(wait_for=[...])` to ensure tasks are scheduled according to their dependencies while correctly preserving Prefect context and UI logs.
 
 ---
 
@@ -55,11 +55,11 @@ The dedicated helper `_build_dependency_graph(instantiated_steps)` translates fi
 ### A. Cycle Detection (`_has_loop`)
 Before executing any steps, the system performs cycle detection using a topological reduction (Kahn's algorithm). If a cycle is detected (i.e. steps depend on each other cyclically), a `ValueError` is raised, preventing any task execution.
 
-### B. Dynamic Thread Pool Scheduling
-The parallel scheduler works in a loop using a `ThreadPoolExecutor`:
-1.  Identifies all steps in the dependency graph that have zero remaining dependencies and are not currently running.
-2.  Removes those steps from the graph and submits them to the thread pool.
-3.  Waits for the next running step to finish.
-4.  Once a step completes, its result is checked (exceptions are propagated, halting the flow).
-5.  The completed step is removed from the dependency sets of all remaining steps.
-6.  The loop repeats until the graph is empty and all jobs are complete.
+### B. Native Prefect Scheduling
+The parallel scheduler works by mapping tasks to Prefect futures:
+1.  Iterates through the step-to-step dependency graph.
+2.  Identifies steps whose dependencies have all been submitted.
+3.  Submits those steps to Prefect's task runner using `step.__call__.submit(wait_for=[...])`, passing the `PrefectFuture` objects of their required dependencies. This delegates concurrent execution and synchronization entirely to Prefect.
+4.  If a step's dependencies are satisfied, it is submitted; otherwise, it is skipped in the current iteration until its dependencies are submitted.
+5.  If an iteration finishes without submitting any new tasks, a `ValueError` for deadlock is raised (though cycle detection should preempt this).
+6.  Once all tasks are submitted, the system waits for all futures to complete (`future.result()`), which propagates any task execution exceptions and halts the flow appropriately.

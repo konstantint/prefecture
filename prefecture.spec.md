@@ -142,6 +142,23 @@ The intended usage is to run `prefecture` with its dependencies using Docker as 
 
 All components are classes with a `__call__` method decorated with `@task`. They accept `config_dir` and `run_dir` in `__init__` (as keyword-only arguments), and take no arguments in `__call__`. Every operator class must also define a `__repr__` method that outputs the `ClassName(arg=value, arg=value, ...)` used to construct the operator, keeping the output concise.
 
+### Task Caching Strategy (Prefect 3.x)
+To optimize workflow retries and avoid re-running expensive operations (like AI generation or API requests), we leverage Prefect 3.x task caching.
+
+1. **Custom `cache_key_fn`**: Since the computational arguments are bound to the instance (`self`) rather than passed to `__call__`, the `@task` decorators should use a custom global helper:
+   ```python
+   def operator_cache_key(context, parameters):
+       task_instance = parameters.get("self")
+       if task_instance and hasattr(task_instance, "cache_key"):
+           return task_instance.cache_key()
+       return None
+   ```
+2. **`cache_key()` Implementation**: Every operation class implements a `cache_key(self) -> str | None` method. The function returns a deterministic string incorporating the component's name, relevant arguments, and `self.run_dir` (important to isolate day-to-day runs). If a task cannot or should not be cached, it returns `None` (disabling caching for that run).
+3. **Handling Tasks with Local File Side Effects**: Tasks that write to `run_dir` but return `None` (like `GoogleChatReader`) can safely be cached. On a cache hit, Prefect will skip the `__call__` logic entirely and return the cached `None`. Because retries operate within the same `run_dir` (where the files already reside as a side-effect of the prior run), downstream steps will succeed. For added safety, an operator's `cache_key()` can optionally check if its expected output file exists in `run_dir`, and return `None` to gracefully break the cache and force re-execution if data was somehow lost.
+4. **Hermetic Caching Tests**: To ensure the caching configuration properly halts execution and doesn't leak duplicate API calls on retries, components must have their caching behavior formally tested. These tests should use `prefect.testing.utilities.prefect_test_harness` (which provides isolated, temporary task persistence) and `unittest.mock.patch` to intercept the internal network/side-effect call. The test should invoke the task twice within a flow and explicitly assert that the patched internal method was called exactly once (`mock.assert_called_once()`).
+
+5. **Cached Components**: The components that implement the `cache_key()` method and use the `cache_key_fn` configuration are `GeminiGenerator`, `GeminiImageGenerator`, `GeminiTtsGenerator`, `GoogleChatReader` (returns the path to the saved `data.json` instead of `None` for clearer caching mechanics), and `Jinja2Templater`. Operations with pure outbound side-effects like `NtfySender`, `GmailMailer`, and `CopyFile` do not implement caching since they should always execute when reached.
+
 ### A. `operations.templating.Jinja2Templater`
 *   Loads template (resolved relative to config file).
 *   Executes registered context loaders:

@@ -1,13 +1,16 @@
 """Google Chat writer tasks for Prefecture."""
 
 import argparse
+import mimetypes
 import os
 import pathlib
+import typing
 
 import dotenv
 from google.auth.transport import requests
 from google.oauth2 import credentials
 from googleapiclient import discovery
+from googleapiclient.http import MediaFileUpload
 import prefect
 import yaml
 
@@ -29,6 +32,7 @@ class GoogleChatWriter:
         content_file_name: str | None = None,
         content: str | None = None,
         use_markdown: bool = True,
+        attachments: list[dict[str, str]] | None = None,
     ):
         """Initializes the GoogleChatWriter."""
         if (content_file_name is not None) and (content is not None):
@@ -49,9 +53,10 @@ class GoogleChatWriter:
         self.content_file_name = content_file_name
         self.content = content
         self.use_markdown = use_markdown
+        self.attachments = attachments or []
 
     def __repr__(self) -> str:
-        return f"GoogleChatWriter(space_id={repr(self.space_id)}, use_markdown={self.use_markdown}, content_file_name={repr(self.content_file_name)}, content={repr(self.content)})"
+        return f"GoogleChatWriter(space_id={repr(self.space_id)}, use_markdown={self.use_markdown}, content_file_name={repr(self.content_file_name)}, content={repr(self.content)}, attachments={self.attachments})"
 
     def _get_credentials(self) -> credentials.Credentials:
         """Gets Google API credentials."""
@@ -97,10 +102,30 @@ class GoogleChatWriter:
         parent = f"spaces/{self.space_id}"
 
         try:
-            body: dict[str, str] = {"text": message_text}
+            body: dict[str, typing.Any] = {"text": message_text}
             if self.use_markdown:
                 # Tell Google Chat API to parse as standard Markdown
                 body["markupSyntax"] = "MARKUP_SYNTAX_MARKDOWN"
+
+            appended_attachments = []
+            for att in self.attachments:
+                if "image_file_name" in att:
+                    image_name = att["image_file_name"]
+                    image_path = self.run_dir / image_name
+                    mime_type, _ = mimetypes.guess_type(image_path)
+                    if mime_type is None:
+                        mime_type = "application/octet-stream"
+                    media = MediaFileUpload(str(image_path), mimetype=mime_type)
+                    upload_result = service.media().upload(
+                        parent=parent,
+                        body={'filename': image_path.name},
+                        media_body=media
+                    ).execute()
+                    if "attachmentDataRef" in upload_result:
+                        appended_attachments.append({"attachmentDataRef": upload_result["attachmentDataRef"]})
+
+            if appended_attachments:
+                body["attachment"] = appended_attachments
 
             response = service.spaces().messages().create(
                 parent=parent,
@@ -113,12 +138,19 @@ class GoogleChatWriter:
 
     @property
     def dependencies(self) -> set[str]:
+        deps = set()
         if getattr(self, "content_file_name", None):
             path = pathlib.Path(self.content_file_name)
             if not path.is_absolute():
                 path = self.run_dir / path
-            return {str(path.resolve())}
-        return set()
+            deps.add(str(path.resolve()))
+        for att in getattr(self, "attachments", []):
+            if "image_file_name" in att:
+                path = pathlib.Path(att["image_file_name"])
+                if not path.is_absolute():
+                    path = self.run_dir / path
+                deps.add(str(path.resolve()))
+        return deps
 
     @property
     def outputs(self) -> set[str]:

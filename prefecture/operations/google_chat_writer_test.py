@@ -136,3 +136,59 @@ def test_google_chat_writer_api_error(mock_build, mock_get_credentials, tmp_path
         body={"text": "Fail, test!", "markupSyntax": "MARKUP_SYNTAX_MARKDOWN"}
     )
     mock_execute.assert_called_once()
+
+@mock.patch('prefecture.operations.google_chat_writer.GoogleChatWriter._get_credentials')
+@mock.patch('prefecture.operations.google_chat_writer.discovery.build')
+@mock.patch('prefecture.operations.google_chat_writer.MediaFileUpload')
+def test_google_chat_writer_with_attachments(mock_media_file_upload, mock_build, mock_get_credentials, tmp_path):
+    """Test successful write with an image attachment."""
+    mock_service = mock.Mock()
+    mock_build.return_value = mock_service
+    
+    # Mock media upload
+    mock_media = mock_service.media.return_value
+    mock_upload = mock_media.upload
+    mock_upload_execute = mock.Mock(return_value={"attachmentDataRef": {"resourceName": "attachment/123"}})
+    mock_upload.return_value.execute = mock_upload_execute
+    
+    # Mock message create
+    mock_messages = mock_service.spaces.return_value.messages.return_value
+    mock_create = mock_messages.create
+    mock_execute = mock.Mock(return_value={"name": "spaces/test_space/messages/123"})
+    mock_create.return_value.execute = mock_execute
+
+    content_file = tmp_path / "hello.md"
+    content_file.write_text("Hello from file with attachment!")
+    
+    image_file = tmp_path / "test_image.png"
+    image_file.write_bytes(b"dummy image data")
+
+    writer = GoogleChatWriter(
+        config_dir=str(tmp_path),
+        run_dir=str(tmp_path),
+        client_id="test_client",
+        client_secret="test_secret",
+        refresh_token="test_token",
+        space_id="test_space",
+        content_file_name="hello.md",
+        attachments=[{"image_file_name": "test_image.png"}]
+    )
+
+    writer()
+
+    # Verify attachment upload
+    mock_upload.assert_called_once()
+    assert mock_upload.call_args[1]["parent"] == "spaces/test_space"
+    assert mock_upload.call_args[1]["body"] == {"filename": "test_image.png"}
+    mock_upload_execute.assert_called_once()
+
+    # Verify message create payload includes the attachmentDataRef
+    mock_create.assert_called_once_with(
+        parent="spaces/test_space",
+        body={
+            "text": "Hello from file with attachment!",
+            "markupSyntax": "MARKUP_SYNTAX_MARKDOWN",
+            "attachment": [{"attachmentDataRef": {"resourceName": "attachment/123"}}]
+        }
+    )
+    mock_execute.assert_called_once()

@@ -14,12 +14,14 @@ google_chat_writer:
   space_id: "AAAANPQ7Dow"              # The ID of the space to send the message to (the part after spaces/)
   content_file_name: "digest.md"        # Optional. Read content from file.
   content: "Hello from prefecture!"    # Optional. Inline content. Either content_file_name or content must be specified.
+  attachments:                         # Optional. List of attachments (e.g., images) to upload with the message.
+    - image_file_name: "chart.png"
 ```
 
 ## 3. Behavior
 1. Validates that exactly one of `content_file_name` or `content` is provided. If `content_file_name` is used, the content is read from `<run_dir>/<content_file_name>`.
 2. Authenticates with the Google Chat API using the provided credentials (`client_id`, `client_secret`, `refresh_token`) by requesting a new short-lived access token from `https://oauth2.googleapis.com/token`.
-3. Posts the message to the specified space via `POST https://chat.googleapis.com/v1/spaces/spaces/{space_id}/messages` (or `https://chat.googleapis.com/v1/spaces/{space_id}/messages` if the 'spaces/' Prefix is automatically handled). Note that the API endpoint expects `spaces/` as a prefix.
+3. Posts the message to the specified space via `POST https://chat.googleapis.com/v1/spaces/spaces/{space_id}/messages` (or `https://chat.googleapis.com/v1/spaces/{space_id}/messages` if the 'spaces/' Prefix is automatically handled). Note that the API endpoint expects `spaces/` as a prefix. If `attachments` are provided, the Writer first uploads them via Google Chat `media().upload()` Endpoint and appends the `attachmentDataRef` to the final message.
 4. Outputs the API response on success or raises an exception on failure.
 
 ## 4. Scopes and Authentication

@@ -14,6 +14,7 @@ STEP_MAP = {
     "ntfy": "prefecture.operations.ntfy.NtfySender",
     "mailer": "prefecture.operations.mailer.GmailMailer",
     "google_chat_reader": "prefecture.operations.google_chat_reader.GoogleChatReader",
+    "google_chat_writer": "prefecture.operations.google_chat_writer.GoogleChatWriter",
     "copyfile": "prefecture.operations.copyfile.CopyFile",
 }
 

@@ -5,7 +5,13 @@ import os
 from unittest import mock
 import pytest
 from googleapiclient.errors import HttpError
+from prefect.testing.utilities import prefect_test_harness
 from prefecture.operations.google_chat_reader import GoogleChatReader
+
+@pytest.fixture(autouse=True, scope="session")
+def prefect_test_fixture():
+    with prefect_test_harness():
+        yield
 
 
 @mock.patch('prefecture.operations.google_chat_reader.discovery.build')

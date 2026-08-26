@@ -60,6 +60,7 @@ Built-in shorthand mapping:
 *   `mailer`: `prefecture.operations.mailer.GmailMailer`
 *   `ntfy`: `prefecture.operations.ntfy.NtfySender`
 *   `google_chat_reader`: `prefecture.operations.google_chat_reader.GoogleChatReader`
+*   `google_chat_writer`: `prefecture.operations.google_chat_writer.GoogleChatWriter`
 *   `copyfile`: `prefecture.operations.copyfile.CopyFile`
 
 ### A. Business Logic: `configs/<name>.yaml`
@@ -215,7 +216,11 @@ To optimize workflow retries and avoid re-running expensive operations (like AI 
 *   Uses OAuth 2.0 for authentication.
 *   Saves raw JSON and simplified `data.json`.
 
-### H. `operations.copyfile.CopyFile`
+### H. `operations.google_chat_writer.GoogleChatWriter`
+*   Reads content from `run_dir / content_file_name` OR uses explicit `content` string.
+*   Sends message to specified Google Chat space using OAuth 2.0 authentication.
+
+### I. `operations.copyfile.CopyFile`
 *   Copies a file from `from_path` to `to_path`.
 *   Paths are resolved relative to `run_dir` if they are not absolute.
 

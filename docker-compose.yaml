@@ -2,7 +2,6 @@ services:
   prefect-server:
     container_name: prefect-server
     image: prefecthq/prefect:3.7.0-python3.14
-    user: "${UID:-0}:${GID:-0}"
     environment:
       TZ: Europe/Zurich
       PREFECT_SERVER_ANALYTICS_ENABLED: false
@@ -24,6 +23,10 @@ services:
     build: .
     depends_on:
       - prefect-server
+    # NB: We want to run the prefect worker as non-root so that workdir
+    # outputs are written as non-root.
+    # We do want the server to run as root because otherwise it seems to
+    # throw SQLite DB is locked errors and just stops working.
     user: "${UID:-0}:${GID:-0}"
     # CWD for the worker must be here
     working_dir: /workdir
@@ -31,6 +34,11 @@ services:
       DO_NOT_TRACK: 1
       TZ: Europe/Zurich
       PREFECT_API_URL: http://prefect-server:4200/api
+      # When running under $UID the default path for storing artifacts will be home(UID)/.prefect/storage,
+      # but for an unknown UID this will resolve to /.prefect/storage and the worker will
+      # report errors by being unable to write to that location. We thus specify the
+      # actual storage location here.
+      PREFECT_LOCAL_STORAGE_PATH: /workdir/.prefect/storage
     # Technically the worker will still read it in again, but in
     # principle we could provide secrets from elsewhere here
     # and not mount them into the container at all.

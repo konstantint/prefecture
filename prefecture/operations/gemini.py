@@ -58,7 +58,7 @@ class GeminiGenerator:
             return None
         return "-".join(key_parts)
 
-    @prefect.task(name="GeminiGenerator", cache_key_fn=operator_cache_key, persist_result=True, retries=5, retry_delay_seconds=exponential_backoff(backoff_factor=2))
+    @prefect.task(name="GeminiGenerator", cache_key_fn=operator_cache_key, persist_result=True, retries=10, retry_delay_seconds=exponential_backoff(backoff_factor=2))
     def __call__(self) -> str:
         """Runs the Gemini generation task."""
         prompt_path = self.run_dir / self.prompt_file_name

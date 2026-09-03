@@ -54,6 +54,7 @@ class RunDirFileLoader(ContextLoader):
         self,
         file_name: str,
         days_ago: int = 0,
+        config_name: str | None = None,
         fail_on_error: bool = False,
         load_json: bool = False,
         run_dir: pathlib.Path | None = None,
@@ -62,6 +63,7 @@ class RunDirFileLoader(ContextLoader):
         super().__init__(run_dir=run_dir)
         self.file_name = file_name
         self.days_ago = days_ago
+        self.config_name = config_name
         self.fail_on_error = fail_on_error
         self.load_json = load_json
 
@@ -70,8 +72,12 @@ class RunDirFileLoader(ContextLoader):
         if not self.run_dir:
             raise ValueError("run_dir must be specified")
 
+        base_dir = self.run_dir.parent
+        if self.config_name:
+            base_dir = base_dir.parent / self.config_name
+
         if self.days_ago == 0:
-            target_path = self.run_dir / self.file_name
+            target_path = base_dir / self.run_dir.name / self.file_name
         else:
             try:
                 current_date = datetime.datetime.strptime(
@@ -81,7 +87,7 @@ class RunDirFileLoader(ContextLoader):
                     days=self.days_ago
                 )
                 prev_date_str = prev_date.strftime("%Y-%m-%d")
-                target_path = self.run_dir.parent / prev_date_str / self.file_name
+                target_path = base_dir / prev_date_str / self.file_name
             except ValueError:
                 if self.fail_on_error:
                     raise ValueError(
@@ -106,8 +112,13 @@ class RunDirFileLoader(ContextLoader):
     def dependencies(self) -> set[str]:
         if not self.run_dir:
             return set()
+            
+        base_dir = self.run_dir.parent
+        if self.config_name:
+            base_dir = base_dir.parent / self.config_name
+
         if self.days_ago == 0:
-            target_path = self.run_dir / self.file_name
+            target_path = base_dir / self.run_dir.name / self.file_name
         else:
             try:
                 current_date = datetime.datetime.strptime(
@@ -117,7 +128,7 @@ class RunDirFileLoader(ContextLoader):
                     days=self.days_ago
                 )
                 prev_date_str = prev_date.strftime("%Y-%m-%d")
-                target_path = self.run_dir.parent / prev_date_str / self.file_name
+                target_path = base_dir / prev_date_str / self.file_name
             except ValueError:
                 return set()
         return {str(target_path.resolve())}

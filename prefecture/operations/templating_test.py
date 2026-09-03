@@ -350,3 +350,67 @@ def test_datetime_now_loader(test_template_dir):
 
 
 
+
+def test_run_dir_file_loader_config_name(test_template_dir):
+    """Test RunDirFileLoader with config_name parameter."""
+    base_dir = test_template_dir / "data"
+    
+    current_dir = base_dir / "current_app" / "2023-10-25"
+    current_dir.mkdir(parents=True)
+    
+    other_dir = base_dir / "other_app" / "2023-10-25"
+    other_dir.mkdir(parents=True)
+    with open(other_dir / "digest.md", "w") as f:
+        f.write("Other config content")
+
+    prompt_config = {
+        "template_file": "test_prompt.j2",
+        "params": {"name": "ConfigTest"},
+        "context_loaders": [
+            {
+                "type": "run_dir_file",
+                "assign_to": "last_weeks_digest",
+                "params": {"file_name": "digest.md", "config_name": "other_app"},
+            }
+        ],
+    }
+
+    generator = templating.Jinja2Templater(
+        config_dir=test_template_dir, run_dir=current_dir, **prompt_config
+    )
+    generated_prompt = generator()
+    assert (
+        generated_prompt == "Hello ConfigTest! Previous: Other config content"
+    )
+
+def test_run_dir_file_loader_config_name_days_ago(test_template_dir):
+    """Test RunDirFileLoader with config_name and days_ago parameter."""
+    base_dir = test_template_dir / "data"
+    
+    current_dir = base_dir / "current_app" / "2023-10-25"
+    current_dir.mkdir(parents=True)
+    
+    other_dir_prev = base_dir / "other_app" / "2023-10-24"
+    other_dir_prev.mkdir(parents=True)
+    with open(other_dir_prev / "digest.md", "w") as f:
+        f.write("Other config previous content")
+
+    prompt_config = {
+        "template_file": "test_prompt.j2",
+        "params": {"name": "ConfigTestDaysAgo"},
+        "context_loaders": [
+            {
+                "type": "run_dir_file",
+                "assign_to": "last_weeks_digest",
+                "params": {"file_name": "digest.md", "config_name": "other_app", "days_ago": 1},
+            }
+        ],
+    }
+
+    generator = templating.Jinja2Templater(
+        config_dir=test_template_dir, run_dir=current_dir, **prompt_config
+    )
+    generated_prompt = generator()
+    assert (
+        generated_prompt == "Hello ConfigTestDaysAgo! Previous: Other config previous content"
+    )

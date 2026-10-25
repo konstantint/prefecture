@@ -201,7 +201,8 @@ To optimize workflow retries and avoid re-running expensive operations (like AI 
 
 ### E. `operations.mailer.GmailMailer`
 *   Reads content from `run_dir / content_file_name`.
-*   Parses subject from frontmatter.
+*   Parses `subject`, optional `recipients` / `to` (allowing templated target emails when `recipients` is omitted or overridden), and optional `skip` boolean from YAML frontmatter.
+*   Skips sending if `skip: true` is set in frontmatter or if the body after frontmatter is empty.
 *   Encapsulates email template (`email_base.html.j2`).
 *   Uses Gmail API to send email.
 *   Supports an optional `attachments` list of dicts. For now, it supports:

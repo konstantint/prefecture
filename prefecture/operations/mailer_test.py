@@ -173,3 +173,81 @@ This is a paragraph with image attachments.
         assert image_parts[1]["filename"] == "test_image2.png"
         assert image_parts[1]["content_type"] == "image/png"
 
+
+def test_gmail_mailer_frontmatter_recipients(tmp_path):
+    """Test that GmailMailer uses recipients/to from frontmatter when not hardcoded."""
+    content_file = tmp_path / "reminder.md"
+    content_file.write_text("""---
+subject: You are next week's DJ!
+recipients:
+  - dynamic1@example.com
+  - dynamic2@example.com
+---
+Hello DJ!
+""")
+
+    mailer = GmailMailer(
+        config_dir=tmp_path,
+        run_dir=tmp_path,
+        gmail_client_id="mock_id",
+        gmail_client_secret="mock_secret",
+        gmail_refresh_token="mock_token",
+        content_file_name="reminder.md",
+    )
+
+    with mock.patch("requests.post") as mock_post:
+        mock_token_resp = mock.Mock()
+        mock_token_resp.json.return_value = {"access_token": "mock_access_token"}
+        mock_token_resp.raise_for_status.return_value = None
+
+        mock_send_resp = mock.Mock()
+        mock_send_resp.raise_for_status.return_value = None
+
+        mock_post.side_effect = [mock_token_resp, mock_send_resp, mock_send_resp]
+
+        mailer.__call__.fn(mailer)
+
+        assert mock_post.call_count == 3
+        sent_to = []
+        for call in mock_post.call_args_list[1:]:
+            raw_message_b64 = call[1]["json"]["raw"]
+            msg = message_from_bytes(base64.urlsafe_b64decode(raw_message_b64))
+            sent_to.append(msg["To"])
+        assert sent_to == ["dynamic1@example.com", "dynamic2@example.com"]
+
+
+def test_gmail_mailer_skip_or_empty_body(tmp_path):
+    """Test that GmailMailer does nothing when skip: true or body is empty."""
+    content_file = tmp_path / "skip.md"
+    content_file.write_text("""---
+subject: Should not send
+skip: true
+---
+Body that should be skipped.
+""")
+
+    mailer = GmailMailer(
+        config_dir=tmp_path,
+        run_dir=tmp_path,
+        gmail_client_id="mock_id",
+        gmail_client_secret="mock_secret",
+        gmail_refresh_token="mock_token",
+        recipients=["test@example.com"],
+        content_file_name="skip.md",
+    )
+
+    with mock.patch("requests.post") as mock_post:
+        mailer.__call__.fn(mailer)
+        mock_post.assert_not_called()
+
+    # Also test empty body after frontmatter
+    content_file.write_text("""---
+subject: Empty body
+---
+   
+""")
+    with mock.patch("requests.post") as mock_post:
+        mailer.__call__.fn(mailer)
+        mock_post.assert_not_called()
+
+

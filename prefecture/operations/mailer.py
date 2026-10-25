@@ -34,15 +34,15 @@ class GmailMailer:
         gmail_client_id: str,
         gmail_client_secret: str,
         gmail_refresh_token: str,
-        recipients: list[str],
         content_file_name: str,
+        recipients: list[str] | None = None,
         attachments: list[dict[str, str]] | None = None,
     ):
         """Initializes the GmailMailer."""
         self.client_id = gmail_client_id
         self.client_secret = gmail_client_secret
         self.refresh_token = gmail_refresh_token
-        self.recipients = recipients
+        self.recipients = recipients or []
         self.content_file_name = content_file_name
         self.attachments = attachments or []
         self.config_dir = config_dir
@@ -72,15 +72,32 @@ class GmailMailer:
         with open(content_path, "r") as f:
             md_content = f.read()
         # Parse frontmatter
-        match = re.match(r"^---\s*\n(.*?)\n---\s*\n", md_content, re.DOTALL)
+        fm_recipients = None
+        skip = False
+        match = re.match(r"^---\s*\n(.*?)\n---\s*\n?", md_content, re.DOTALL)
         if match:
             frontmatter_text = match.group(1)
-            metadata = yaml.safe_load(frontmatter_text)
+            metadata = yaml.safe_load(frontmatter_text) or {}
             subject = metadata.get("subject", "No Subject")
+            skip = bool(metadata.get("skip", False))
+            fm_recipients = metadata.get("recipients") or metadata.get("to")
+            if isinstance(fm_recipients, str):
+                fm_recipients = [fm_recipients]
             body = md_content[match.end() :]
         else:
             subject = "No Subject"
             body = md_content
+
+        if skip or not body.strip():
+            print("Skipping email send (marked as skip or empty body).")
+            return
+
+        target_recipients = fm_recipients if fm_recipients else self.recipients
+        target_recipients = [
+            str(r).strip() for r in (target_recipients or []) if r and str(r).strip()
+        ]
+        if not target_recipients:
+            raise ValueError("No recipients specified in config or frontmatter.")
 
         # Compile HTML
         md = MarkdownIt('gfm-like')
@@ -117,7 +134,7 @@ class GmailMailer:
         try:
             access_token = self.get_access_token()
 
-            for recipient in self.recipients:
+            for recipient in target_recipients:
                 msg = multipart.MIMEMultipart()
                 msg["To"] = recipient
                 msg["Subject"] = subject
